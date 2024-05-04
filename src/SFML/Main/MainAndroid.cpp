@@ -51,6 +51,8 @@
 #define SF_GLAD_EGL_IMPLEMENTATION
 #include <glad/egl.h>
 
+#define LOGI(...) ((void)__android_log_print(ANDROID_LOG_INFO, "sfml-activity", __VA_ARGS__))
+
 
 extern int main(int argc, char *argv[]);
 
@@ -551,8 +553,20 @@ JNIEXPORT void ANativeActivity_onCreate(ANativeActivity* activity, void* savedSt
     for (unsigned int i = 0; i < sf::Mouse::ButtonCount; i++)
         states->isButtonPressed[i] = false;
 
-    gladLoaderLoadEGL(EGL_DEFAULT_DISPLAY);
+    // Redirect error messages to logcat
+    sf::err().rdbuf(&states->logcat);
+
+    int version;
+    if (!(version = gladLoaderLoadEGL(EGL_DEFAULT_DISPLAY))) {
+        sf::err() << "gladLoaderLoadEGL failed!" << std::endl;
+    } else {
+        LOGI("glad version: %d.%d\n" + GLAD_VERSION_MAJOR(version), GLAD_VERSION_MINOR(version));
+    }
+
     states->display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
+    if (states->display == EGL_NO_DISPLAY){
+        sf::err() << "eglGetDisplay failed!" << std::endl;
+    }
 
     if (savedState != NULL)
     {
@@ -602,11 +616,10 @@ JNIEXPORT void ANativeActivity_onCreate(ANativeActivity* activity, void* savedSt
     // Initialize the display
     eglInitialize(states->display, NULL, NULL);
 
+    LOGI("Egl version %s\n", eglQueryString(states->display, EGL_VERSION));
+
     getScreenSizeInPixels(activity, &states->screenSize.x, &states->screenSize.y);
     getFullScreenSizeInPixels(activity, &states->screenSize.x, &states->screenSize.y);
-
-    // Redirect error messages to logcat
-    sf::err().rdbuf(&states->logcat);
 
     // Launch the main thread
     sf::Thread* thread = new sf::Thread(sf::priv::main, states);

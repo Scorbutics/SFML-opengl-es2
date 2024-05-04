@@ -45,6 +45,7 @@
 #include <SFML/System/Err.hpp>
 #include <android/window.h>
 #include <android/native_activity.h>
+#include <android/log.h>
 #include <cstring>
 #include <cassert>
 

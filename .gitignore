@@ -61,3 +61,4 @@ examples/vulkan/vulkan-d
 examples/window/window-d
 examples/X11/X11Example-d
 install_manifest.txt
+examples/shader-es/shader-es-d

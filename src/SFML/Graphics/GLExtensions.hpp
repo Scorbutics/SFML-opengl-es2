@@ -138,6 +138,8 @@
 
     // Core since 2.0 - ARB_vertex_shader
     #define GLEXT_vertex_shader                       true
+    #define GLEXT_glGetAttribLocation                 glGetAttribLocation
+    #define GLEXT_glBindAttribLocation                glBindAttribLocation
     #define GLEXT_GL_VERTEX_SHADER                    GL_VERTEX_SHADER
     #define GLEXT_GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS
 

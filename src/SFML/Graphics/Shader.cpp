@@ -979,8 +979,6 @@ bool Shader::compile(const char* vertexShaderCode, const char* geometryShaderCod
         return false;
     }
 
-#ifndef SFML_OPENGL_ES
-
     // Destroy the shader if it was already created
     if (m_shaderProgram)
     {
@@ -1096,97 +1094,6 @@ bool Shader::compile(const char* vertexShaderCode, const char* geometryShaderCod
         return false;
     }
 
-#else
-
-    // Destroy the shader if it was already created
-    if (m_shaderProgram)
-    {
-        glCheck(glDeleteProgram(castToGlHandle(m_shaderProgram)));
-        m_shaderProgram = 0;
-    }
-
-    // Reset the internal state
-    m_currentTexture = -1;
-    m_textures.clear();
-    m_uniforms.clear();
-
-    // Create the program
-    GLuint shaderProgram;
-    glCheck(shaderProgram = glCreateProgram());
-
-    // Create the vertex shader if needed
-    if (vertexShaderCode)
-    {
-        // Create and compile the shader
-        GLuint vertexShader;
-        glCheck(vertexShader = glCreateShader(GL_VERTEX_SHADER));
-        glCheck(glShaderSource(vertexShader, 1, &vertexShaderCode, NULL));
-        glCheck(glCompileShader(vertexShader));
-
-        // Check the compile log
-        GLint success;
-        glCheck(glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success));
-        if (success == GL_FALSE)
-        {
-            char log[1024];
-            glCheck(glGetShaderInfoLog(vertexShader, 1024, NULL, log));
-            err() << "Failed to compile vertex shader:" << std::endl
-                << log << std::endl;
-            glCheck(glDeleteShader(vertexShader));
-            glCheck(glDeleteProgram(shaderProgram));
-            return false;
-        }
-
-        // Attach the shader to the program, and delete it (not needed anymore)
-        glCheck(glAttachShader(shaderProgram, vertexShader));
-        glCheck(glDeleteShader(vertexShader));
-    }
-
-    // Create the fragment shader if needed
-    if (fragmentShaderCode)
-    {
-        // Create and compile the shader
-        GLuint fragmentShader;
-        glCheck(fragmentShader = glCreateShader(GLEXT_GL_FRAGMENT_SHADER));
-        glCheck(glShaderSource(fragmentShader, 1, &fragmentShaderCode, NULL));
-        glCheck(glCompileShader(fragmentShader));
-
-        // Check the compile log
-        GLint success;
-        glCheck(glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success));
-        if (success == GL_FALSE)
-        {
-            char log[1024];
-            glCheck(glGetShaderInfoLog(fragmentShader, 1024, NULL, log));
-            err() << "Failed to compile fragment shader:" << std::endl
-                << log << std::endl;
-            glCheck(glDeleteShader(fragmentShader));
-            glCheck(glDeleteProgram(shaderProgram));
-            return false;
-        }
-
-        // Attach the shader to the program, and delete it (not needed anymore)
-        glCheck(glAttachShader(shaderProgram, fragmentShader));
-        glCheck(glDeleteShader(fragmentShader));
-    }
-
-    // Link the program
-    glCheck(glLinkProgram(shaderProgram));
-
-    // Check the link log
-    GLint success;
-    glCheck(glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success));
-    if (success == GL_FALSE)
-    {
-        char log[1024];
-        glCheck(glGetProgramInfoLog(shaderProgram, 1024, NULL, log));
-        err() << "Failed to link shader:" << std::endl
-            << log << std::endl;
-        glCheck(glDeleteProgram(shaderProgram));
-        return false;
-    }
-
-#endif
 
     m_shaderProgram = castFromGlHandle(shaderProgram);
 

@@ -118,6 +118,13 @@
     #define GLEXT_shader_objects                      true
     #define GLEXT_glUseProgramObject                  glUseProgram
     #define GLEXT_glDeleteObject                      glDeleteProgram
+    #define GLEXT_glGetHandle                         glGetHandle
+    #define GLEXT_glCreateShaderObject                glCreateShader
+    #define GLEXT_glShaderSource                      glShaderSource
+    #define GLEXT_glCompileShader                     glCompileShader
+    #define GLEXT_glCreateProgramObject               glCreateProgram
+    #define GLEXT_glAttachObject                      glAttachShader
+    #define GLEXT_glLinkProgram                       glLinkProgram
     #define GLEXT_glUniform1f                         glUniform1f
     #define GLEXT_glUniform2f                         glUniform2f
     #define GLEXT_glUniform3f                         glUniform3f
@@ -134,7 +141,11 @@
     #define GLEXT_glUniformMatrix3fv                  glUniformMatrix3fv
     #define GLEXT_glUniformMatrix4fv                  glUniformMatrix4fv
     #define GLEXT_glGetUniformLocation                glGetUniformLocation
+    #define GLEXT_glGetObjectParameteriv              glGetShaderiv
+    #define GLEXT_glGetInfoLog                        glGetShaderInfoLog
     #define GLEXT_GLhandle                            GLint
+    #define GLEXT_GL_OBJECT_COMPILE_STATUS            GL_COMPILE_STATUS
+    #define GLEXT_GL_OBJECT_LINK_STATUS               GL_LINK_STATUS
 
     // Core since 2.0 - ARB_vertex_shader
     #define GLEXT_vertex_shader                       true
@@ -178,6 +189,9 @@
     #define GLEXT_blend_minmax                        SF_GLAD_GL_EXT_blend_minmax
     #define GLEXT_GL_MIN                              GL_MIN_EXT
     #define GLEXT_GL_MAX                              GL_MAX_EXT
+
+    // Geometry shaders
+    #define GLEXT_GL_GEOMETRY_SHADER                  GL_GEOMETRY_SHADER
 
 #else
 

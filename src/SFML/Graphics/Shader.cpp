@@ -785,14 +785,14 @@ bool Shader::isAvailable()
 
         TransientContextLock contextLock;
 
+        // Make sure that extensions are initialized
+        sf::priv::ensureExtensionsInit();
+
 #ifdef SFML_OPENGL_ES
 
         available = true;
 
 #else
-
-        // Make sure that extensions are initialized
-        sf::priv::ensureExtensionsInit();
 
         available = GLEXT_multitexture         &&
                     GLEXT_shading_language_100 &&
@@ -822,14 +822,14 @@ bool Shader::isGeometryAvailable()
 
         TransientContextLock contextLock;
 
+        // Make sure that extensions are initialized
+        sf::priv::ensureExtensionsInit();
+
 #ifdef SFML_OPENGL_ES
 
         available = false;
 
 #else
-
-        // Make sure that extensions are initialized
-        sf::priv::ensureExtensionsInit();
 
         available = isAvailable() && (GLEXT_geometry_shader4 || GLEXT_GL_VERSION_3_2);
 

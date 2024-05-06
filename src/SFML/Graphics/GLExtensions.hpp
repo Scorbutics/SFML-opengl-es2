@@ -118,7 +118,6 @@
     #define GLEXT_shader_objects                      true
     #define GLEXT_glUseProgramObject                  glUseProgram
     #define GLEXT_glDeleteObject                      glDeleteProgram
-    #define GLEXT_glGetHandle                         glGetHandle
     #define GLEXT_glCreateShaderObject                glCreateShader
     #define GLEXT_glShaderSource                      glShaderSource
     #define GLEXT_glCompileShader                     glCompileShader

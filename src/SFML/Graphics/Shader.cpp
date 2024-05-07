@@ -924,12 +924,12 @@ const Shader& Shader::getDefaultTexShader()
             "precision mediump float;"
             "varying vec4 sf_color;"
             "varying vec2 sf_texCoord;"
-            "uniform sampler2D sf_sampler;"
+            "uniform sampler2D texture;"
             "uniform mat4 sf_texture;"
             "void main()"
             "{"
             "    vec4 coord = sf_texture * vec4(sf_texCoord, 0.0, 1.0);"
-            "    gl_FragColor = texture2D(sf_sampler, coord.xy) * sf_color;"
+            "    gl_FragColor = texture2D(texture, coord.xy) * sf_color;"
             "}"
         );
 #else
@@ -1114,7 +1114,12 @@ void Shader::bindTextures() const
         GLint index = static_cast<GLsizei>(i + 1);
         glCheck(GLEXT_glUniform1i(it->first, index));
         glCheck(GLEXT_glActiveTexture(GLEXT_GL_TEXTURE0 + static_cast<GLenum>(index)));
-        Texture::bind(it->second);
+        std::vector<float> matrix = Texture::bind(it->second);
+#ifdef SFML_OPENGL_ES
+        if (!matrix.empty()) {
+            const_cast<Shader*>(this)->setUniform("sf_texture", static_cast<Glsl::Mat4>(matrix.data()));
+        }
+#endif
         ++it;
     }
 

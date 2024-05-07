@@ -178,7 +178,7 @@ void RenderTarget::clear(const Color& color)
     if (RenderTargetImpl::isActive(m_id) || setActive(true))
     {
         // Unbind texture to fix RenderTexture preventing clear
-        applyTexture(NULL);
+        applyTexture(NULL, NULL);
 
         glCheck(glClearColor(color.r / 255.f, color.g / 255.f, color.b / 255.f, color.a / 255.f));
         glCheck(glClear(GL_COLOR_BUFFER_BIT));
@@ -608,7 +608,7 @@ void RenderTarget::resetGLStates()
 
         // Apply the default SFML states
         applyBlendMode(BlendAlpha);
-        applyTexture(NULL);
+        applyTexture(NULL, NULL);
         if (shaderAvailable)
             applyShader(NULL);
 
@@ -731,10 +731,14 @@ void RenderTarget::applyTransform(const Transform& transform)
 
 
 ////////////////////////////////////////////////////////////
-void RenderTarget::applyTexture(const Texture* texture)
+void RenderTarget::applyTexture(const Texture* texture, const Shader* shader)
 {
-    Texture::bind(texture, Texture::Pixels);
-
+    std::vector<float> matrix = Texture::bind(texture, Texture::Pixels);
+    #ifdef SFML_OPENGL_ES
+    if (!matrix.empty() && shader) {
+        const_cast<Shader*>(shader)->setUniform("sf_texture", static_cast<Glsl::Mat4>(matrix.data()));
+    }
+    #endif
     m_cache.lastTextureId = texture ? texture->m_cacheId : 0;
 }
 
@@ -817,8 +821,6 @@ void RenderTarget::setupDraw(bool useVertexCache, const RenderStates& states)
     if (!m_cache.enable || (states.blendMode != m_cache.lastBlendMode))
         applyBlendMode(states.blendMode);
 
-    bool setTexture = false;
-
     // Apply the texture
     if (!m_cache.enable || (states.texture && states.texture->m_fboAttachment))
     {
@@ -829,20 +831,13 @@ void RenderTarget::setupDraw(bool useVertexCache, const RenderStates& states)
         // RenderTextureImplFBO which can be quite costly
         // See: https://www.khronos.org/opengl/wiki/Memory_Model
 
-        applyTexture(states.texture);
-        if (states.texture)
-            setTexture = true;
+        applyTexture(states.texture, states.shader);
     }
     else
     {
         Uint64 textureId = states.texture ? states.texture->m_cacheId : 0;
         if (textureId != m_cache.lastTextureId)
-        {
-            applyTexture(states.texture);
-
-        if (states.texture)
-            setTexture = true;
-        }
+            applyTexture(states.texture, states.shader);
     }
 
     // Apply the shader
@@ -850,28 +845,6 @@ void RenderTarget::setupDraw(bool useVertexCache, const RenderStates& states)
         applyShader(states.shader);
 
 #ifdef SFML_OPENGL_ES
-    if (setTexture)
-    {
-        GLfloat matrix[16] = { 1.f, 0.f, 0.f, 0.f,
-                                  0.f, 1.f, 0.f, 0.f,
-                                  0.f, 0.f, 1.f, 0.f,
-                                  0.f, 0.f, 0.f, 1.f};
-
-        // If non-normalized coordinates (= pixels) are requested, we need to
-        // setup scale factors that convert the range [0 .. size] to [0 .. 1]
-        matrix[0] = 1.f / static_cast<float>(states.texture->m_actualSize.x);
-        matrix[5] = 1.f / static_cast<float>(states.texture->m_actualSize.y);
-
-        // If pixels are flipped we must invert the Y axis
-        if (states.texture->m_pixelsFlipped)
-        {
-            matrix[5] = -matrix[5];
-            matrix[13] = static_cast<float>(states.texture->m_size.y) / static_cast<float>(states.texture->m_actualSize.y);
-        }
-
-        Shader* shader = const_cast<Shader*>(states.shader);
-        shader->setUniform("sf_texture", static_cast<Glsl::Mat4>(matrix));
-    }
 
     if (states.shader && m_cache.programChanged != states.shader->getNativeHandle())
     {
@@ -915,7 +888,7 @@ void RenderTarget::cleanupDraw(const RenderStates& states)
     // If the texture we used to draw belonged to a RenderTexture, then forcibly unbind that texture.
     // This prevents a bug where some drivers do not clear RenderTextures properly.
     if (states.texture && states.texture->m_fboAttachment)
-        applyTexture(NULL);
+        applyTexture(NULL, NULL);
 
     // Re-enable the cache at the end of the draw if it was disabled
     m_cache.enable = false;

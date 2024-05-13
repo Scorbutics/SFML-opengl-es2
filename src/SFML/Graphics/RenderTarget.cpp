@@ -737,6 +737,13 @@ void RenderTarget::applyTexture(const Texture* texture, const Shader* shader)
  #ifdef SFML_OPENGL_ES
     if (matrix && shader) {
         const_cast<Shader*>(shader)->setUniform("sf_texture", static_cast<Glsl::Mat4>(matrix->data()));
+        if (texture->m_actualSize.x != 0 && texture->m_actualSize.y != 0) {
+            GLfloat factor_npot[2] = {
+                static_cast<GLfloat>(texture->m_size.x) / texture->m_actualSize.x,
+                static_cast<GLfloat>(texture->m_size.y) / texture->m_actualSize.y
+            };
+            const_cast<Shader*>(shader)->setUniform("factor_npot", Glsl::Vec2 { factor_npot[0], factor_npot[1] });
+        }
     }
 #endif
     m_cache.lastTextureId = texture ? texture->m_cacheId : 0;

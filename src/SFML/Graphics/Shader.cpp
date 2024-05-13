@@ -1114,10 +1114,10 @@ void Shader::bindTextures() const
         GLint index = static_cast<GLsizei>(i + 1);
         glCheck(GLEXT_glUniform1i(it->first, index));
         glCheck(GLEXT_glActiveTexture(GLEXT_GL_TEXTURE0 + static_cast<GLenum>(index)));
-        std::vector<float> matrix = Texture::bind(it->second);
+        std::optional<std::array<float, 16>> matrix = Texture::bind(it->second);
 #ifdef SFML_OPENGL_ES
-        if (!matrix.empty()) {
-            const_cast<Shader*>(this)->setUniform("sf_texture", static_cast<Glsl::Mat4>(matrix.data()));
+        if (matrix) {
+            const_cast<Shader*>(this)->setUniform("sf_texture", static_cast<Glsl::Mat4>(matrix->data()));
         }
 #endif
         ++it;

@@ -733,12 +733,12 @@ void RenderTarget::applyTransform(const Transform& transform)
 ////////////////////////////////////////////////////////////
 void RenderTarget::applyTexture(const Texture* texture, const Shader* shader)
 {
-    std::vector<float> matrix = Texture::bind(texture, Texture::Pixels);
-    #ifdef SFML_OPENGL_ES
-    if (!matrix.empty() && shader) {
-        const_cast<Shader*>(shader)->setUniform("sf_texture", static_cast<Glsl::Mat4>(matrix.data()));
+    std::optional<std::array<float, 16>> matrix = Texture::bind(texture, Texture::Pixels);
+ #ifdef SFML_OPENGL_ES
+    if (matrix && shader) {
+        const_cast<Shader*>(shader)->setUniform("sf_texture", static_cast<Glsl::Mat4>(matrix->data()));
     }
-    #endif
+#endif
     m_cache.lastTextureId = texture ? texture->m_cacheId : 0;
 }
 

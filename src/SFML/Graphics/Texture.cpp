@@ -763,7 +763,7 @@ void Texture::invalidateMipmap()
 
 
 ////////////////////////////////////////////////////////////
-std::vector<float> Texture::bind(const Texture* texture, CoordinateType coordinateType)
+std::optional<std::array<float, 16>> Texture::bind(const Texture* texture, CoordinateType coordinateType)
 {
     TransientContextLock lock;
 
@@ -775,7 +775,7 @@ std::vector<float> Texture::bind(const Texture* texture, CoordinateType coordina
         // Check if we need to define a special texture matrix
         if ((coordinateType == Pixels) || texture->m_pixelsFlipped)
         {
-            GLfloat matrix[16] = {1.f, 0.f, 0.f, 0.f,
+            std::array<GLfloat, 16> matrix = {1.f, 0.f, 0.f, 0.f,
                                   0.f, 1.f, 0.f, 0.f,
                                   0.f, 0.f, 1.f, 0.f,
                                   0.f, 0.f, 0.f, 1.f};
@@ -799,12 +799,12 @@ std::vector<float> Texture::bind(const Texture* texture, CoordinateType coordina
 #ifndef SFML_OPENGL_ES
             // Load the matrix
             glCheck(glMatrixMode(GL_TEXTURE));
-            glCheck(glLoadMatrixf(matrix));
+            glCheck(glLoadMatrixf(matrix->data()));
 
             // Go back to model-view mode (sf::RenderTarget relies on it)
             glCheck(glMatrixMode(GL_MODELVIEW));
 #else
-            return std::vector<float>(matrix, matrix + 16);
+            return std::make_optional(matrix);
 #endif
         }
 
@@ -827,7 +827,7 @@ std::vector<float> Texture::bind(const Texture* texture, CoordinateType coordina
 
     }
 
-    return std::vector<float>{};
+    return std::nullopt;
 }
 
 

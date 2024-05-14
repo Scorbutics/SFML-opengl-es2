@@ -898,7 +898,7 @@ void RenderTarget::cleanupDraw(const RenderStates& states)
         applyTexture(NULL, NULL);
 
     // Re-enable the cache at the end of the draw if it was disabled
-    m_cache.enable = false;
+    m_cache.enable = true;
 }
 
 } // namespace sf

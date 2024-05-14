@@ -193,7 +193,7 @@ struct Shader::UniformBinder : private NonCopyable
 #ifndef SFML_OPENGL_ES
             glCheck(savedProgram = GLEXT_glGetHandle(GLEXT_GL_PROGRAM_OBJECT));
 #else
-            glCheck(glGetIntegerv(GL_CURRENT_PROGRAM, &savedProgram));
+            glCheck(glGetIntegerv(GL_CURRENT_PROGRAM, reinterpret_cast<GLint*>(&savedProgram)));
 #endif
             if (currentProgram != savedProgram)
                 glCheck(GLEXT_glUseProgramObject(currentProgram));
@@ -237,7 +237,7 @@ Shader::~Shader()
 
     // Destroy effect program
     if (m_shaderProgram)
-        glCheck(GLEXT_glDeleteObject(castToGlHandle(m_shaderProgram)));
+        glCheck(GLEXT_glDeleteProgram(castToGlHandle(m_shaderProgram)));
 }
 
 
@@ -982,7 +982,7 @@ bool Shader::compile(const char* vertexShaderCode, const char* geometryShaderCod
     // Destroy the shader if it was already created
     if (m_shaderProgram)
     {
-        glCheck(GLEXT_glDeleteObject(castToGlHandle(m_shaderProgram)));
+        glCheck(GLEXT_glDeleteProgram(castToGlHandle(m_shaderProgram)));
         m_shaderProgram = 0;
     }
 
@@ -1006,23 +1006,24 @@ bool Shader::compile(const char* vertexShaderCode, const char* geometryShaderCod
 
         // Check the compile log
         GLint success;
-        glCheck(GLEXT_glGetObjectParameteriv(vertexShader, GLEXT_GL_OBJECT_COMPILE_STATUS, &success));
+        glCheck(GLEXT_glGetShaderParameteriv(vertexShader, GLEXT_GL_OBJECT_COMPILE_STATUS, &success));
         if (success == GL_FALSE)
         {
             char log[1024];
-            glCheck(GLEXT_glGetInfoLog(vertexShader, sizeof(log), 0, log));
+            glCheck(GLEXT_glGetShaderInfoLog(vertexShader, sizeof(log), 0, log));
             err() << "Failed to compile vertex shader:" << std::endl
                   << log << std::endl;
-            glCheck(GLEXT_glDeleteObject(vertexShader));
-            glCheck(GLEXT_glDeleteObject(shaderProgram));
+            glCheck(GLEXT_glDeleteShader(vertexShader));
+            glCheck(GLEXT_glDeleteProgram(shaderProgram));
             return false;
         }
 
         // Attach the shader to the program, and delete it (not needed anymore)
-        glCheck(GLEXT_glAttachObject(shaderProgram, vertexShader));
-        glCheck(GLEXT_glDeleteObject(vertexShader));
+        glCheck(GLEXT_glAttachShader(shaderProgram, vertexShader));
+        glCheck(GLEXT_glDeleteShader(vertexShader));
     }
 
+#ifndef SFML_OPENGL_ES
     // Create the geometry shader if needed
     if (geometryShaderCode)
     {
@@ -1033,23 +1034,24 @@ bool Shader::compile(const char* vertexShaderCode, const char* geometryShaderCod
 
         // Check the compile log
         GLint success;
-        glCheck(GLEXT_glGetObjectParameteriv(geometryShader, GLEXT_GL_OBJECT_COMPILE_STATUS, &success));
+        glCheck(GLEXT_glGetShaderParameteriv(geometryShader, GLEXT_GL_OBJECT_COMPILE_STATUS, &success));
         if (success == GL_FALSE)
         {
             char log[1024];
-            glCheck(GLEXT_glGetInfoLog(geometryShader, sizeof(log), 0, log));
+            glCheck(GLEXT_glGetShaderInfoLog(geometryShader, sizeof(log), 0, log));
             err() << "Failed to compile geometry shader:" << std::endl
                   << log << std::endl;
-            glCheck(GLEXT_glDeleteObject(geometryShader));
-            glCheck(GLEXT_glDeleteObject(shaderProgram));
+
+            glCheck(GLEXT_glDeleteShader(geometryShader));
+            glCheck(GLEXT_glDeleteProgram(shaderProgram));
             return false;
         }
 
         // Attach the shader to the program, and delete it (not needed anymore)
-        glCheck(GLEXT_glAttachObject(shaderProgram, geometryShader));
-        glCheck(GLEXT_glDeleteObject(geometryShader));
+        glCheck(GLEXT_glAttachShader(shaderProgram, geometryShader));
+        glCheck(GLEXT_glDeleteShader(geometryShader));
     }
-
+#endif
     // Create the fragment shader if needed
     if (fragmentShaderCode)
     {
@@ -1061,21 +1063,21 @@ bool Shader::compile(const char* vertexShaderCode, const char* geometryShaderCod
 
         // Check the compile log
         GLint success;
-        glCheck(GLEXT_glGetObjectParameteriv(fragmentShader, GLEXT_GL_OBJECT_COMPILE_STATUS, &success));
+        glCheck(GLEXT_glGetShaderParameteriv(fragmentShader, GLEXT_GL_OBJECT_COMPILE_STATUS, &success));
         if (success == GL_FALSE)
         {
             char log[1024];
-            glCheck(GLEXT_glGetInfoLog(fragmentShader, sizeof(log), 0, log));
+            glCheck(GLEXT_glGetShaderInfoLog(fragmentShader, sizeof(log), 0, log));
             err() << "Failed to compile fragment shader:" << std::endl
                   << log << std::endl;
-            glCheck(GLEXT_glDeleteObject(fragmentShader));
-            glCheck(GLEXT_glDeleteObject(shaderProgram));
+            glCheck(GLEXT_glDeleteShader(fragmentShader));
+            glCheck(GLEXT_glDeleteProgram(shaderProgram));
             return false;
         }
 
         // Attach the shader to the program, and delete it (not needed anymore)
-        glCheck(GLEXT_glAttachObject(shaderProgram, fragmentShader));
-        glCheck(GLEXT_glDeleteObject(fragmentShader));
+        glCheck(GLEXT_glAttachShader(shaderProgram, fragmentShader));
+        glCheck(GLEXT_glDeleteShader(fragmentShader));
     }
 
     // Link the program
@@ -1083,14 +1085,14 @@ bool Shader::compile(const char* vertexShaderCode, const char* geometryShaderCod
 
     // Check the link log
     GLint success;
-    glCheck(GLEXT_glGetObjectParameteriv(shaderProgram, GLEXT_GL_OBJECT_LINK_STATUS, &success));
+    glCheck(GLEXT_glGetProgramParameteriv(shaderProgram, GLEXT_GL_OBJECT_LINK_STATUS, &success));
     if (success == GL_FALSE)
     {
         char log[1024];
-        glCheck(GLEXT_glGetInfoLog(shaderProgram, sizeof(log), 0, log));
+        glCheck(GLEXT_glGetProgramInfoLog(shaderProgram, sizeof(log), 0, log));
         err() << "Failed to link shader:" << std::endl
               << log << std::endl;
-        glCheck(GLEXT_glDeleteObject(shaderProgram));
+        glCheck(GLEXT_glDeleteProgram(shaderProgram));
         return false;
     }
 

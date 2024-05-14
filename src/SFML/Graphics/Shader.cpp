@@ -1119,6 +1119,8 @@ void Shader::bindTextures() const
         if (matrix) {
             const_cast<Shader*>(this)->setUniform("sf_texture", static_cast<Glsl::Mat4>(matrix->data()));
         }
+#else
+    (void) matrix;
 #endif
         ++it;
     }

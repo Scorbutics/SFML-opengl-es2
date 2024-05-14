@@ -160,9 +160,6 @@ m_id         (0)
 {
     m_cache.glStatesSet = false;
     m_cache.programChanged = 0;
-    m_cache.posAttrib = -1;
-    m_cache.colAttrib = -1;
-    m_cache.texAttrib = -1;
 }
 
 
@@ -745,6 +742,9 @@ void RenderTarget::applyTexture(const Texture* texture, const Shader* shader)
             const_cast<Shader*>(shader)->setUniform("factor_npot", Glsl::Vec2 { factor_npot[0], factor_npot[1] });
         }
     }
+#else
+    (void) matrix;
+    (void) shader;
 #endif
     m_cache.lastTextureId = texture ? texture->m_cacheId : 0;
 }

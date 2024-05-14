@@ -475,9 +475,9 @@ private:
         bool      useVertexCache; //!< Did we previously use the vertex cache?
         Vertex    vertexCache[VertexCacheSize]; //!< Pre-transformed vertices cache
         Uint32    programChanged;
-        Int32    posAttrib;
-        Int32    colAttrib;
-        Int32    texAttrib;
+        Int32    posAttrib = -1;
+        Int32    colAttrib = -1;
+        Int32    texAttrib = -1;
     };
 
     ////////////////////////////////////////////////////////////

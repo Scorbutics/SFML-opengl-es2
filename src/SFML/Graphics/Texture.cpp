@@ -799,7 +799,7 @@ std::optional<std::array<float, 16>> Texture::bind(const Texture* texture, Coord
 #ifndef SFML_OPENGL_ES
             // Load the matrix
             glCheck(glMatrixMode(GL_TEXTURE));
-            glCheck(glLoadMatrixf(matrix->data()));
+            glCheck(glLoadMatrixf(matrix.data()));
 
             // Go back to model-view mode (sf::RenderTarget relies on it)
             glCheck(glMatrixMode(GL_MODELVIEW));

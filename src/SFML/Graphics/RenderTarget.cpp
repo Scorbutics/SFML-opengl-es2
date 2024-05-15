@@ -321,7 +321,9 @@ void RenderTarget::draw(const Vertex* vertices, std::size_t vertexCount,
 #endif
         // If we switch between non-cache and cache mode or enable texture
         // coordinates we need to set up the pointers to the vertices' components
+#ifndef SFML_OPENGL_ES
         if (!m_cache.enable || !useVertexCache || !m_cache.useVertexCache)
+#endif
         {
             const char* data = reinterpret_cast<const char*>(vertices);
 
@@ -344,18 +346,14 @@ void RenderTarget::draw(const Vertex* vertices, std::size_t vertexCount,
                     glCheck(glVertexAttribPointer(m_cache.texAttrib, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), data + 12));
 #endif
         }
+#ifndef SFML_OPENGL_ES
         else if (enableTexCoordsArray && !m_cache.texCoordsArrayEnabled)
         {
             // If we enter this block, we are already using our internal vertex cache
             const char* data = reinterpret_cast<const char*>(m_cache.vertexCache);
-
-#ifndef SFML_OPENGL_ES
             glCheck(glTexCoordPointer(2, GL_FLOAT, sizeof(Vertex), data + 12));
-#else
-            if (m_cache.texAttrib >= 0)
-                glCheck(glVertexAttribPointer(m_cache.texAttrib, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), data + 12));
-#endif
         }
+#endif
 
         drawPrimitives(type, 0, vertexCount);
         cleanupDraw(states);
@@ -572,9 +570,9 @@ void RenderTarget::resetGLStates()
         // Make sure that the texture unit which is active is the number 0
         if (GLEXT_multitexture)
         {
-            #ifndef SFML_OPENGL_ES
-                glCheck(GLEXT_glClientActiveTexture(GLEXT_GL_TEXTURE0));
-            #endif
+#ifndef SFML_OPENGL_ES
+            glCheck(GLEXT_glClientActiveTexture(GLEXT_GL_TEXTURE0));
+#endif
             glCheck(GLEXT_glActiveTexture(GLEXT_GL_TEXTURE0));
         }
 
@@ -788,18 +786,39 @@ void RenderTarget::setupDraw(bool useVertexCache, const RenderStates& states)
     }
 
 #endif
+    // Apply the shader
+    if (states.shader)
+        applyShader(states.shader);
+
+#ifdef SFML_OPENGL_ES
+    if (states.shader && m_cache.programChanged != states.shader->getNativeHandle())
+    {
+        m_cache.programChanged = states.shader->getNativeHandle();
+        m_cache.posAttrib = glGetAttribLocation(states.shader->getNativeHandle(), "position");
+        m_cache.colAttrib = glGetAttribLocation(states.shader->getNativeHandle(), "color");
+        m_cache.texAttrib = glGetAttribLocation(states.shader->getNativeHandle(), "texCoord");
+        if (m_cache.posAttrib >= 0)
+            glCheck(glEnableVertexAttribArray(m_cache.posAttrib));
+        if (m_cache.colAttrib >= 0)
+            glCheck(glEnableVertexAttribArray(m_cache.colAttrib));
+        if (m_cache.texAttrib >= 0)
+            glCheck(glEnableVertexAttribArray(m_cache.texAttrib));
+    }
+
+#endif
     if (useVertexCache)
     {
         // Since vertices are transformed, we must use an identity transform to render them
+
+#ifndef SFML_OPENGL_ES
         if (!m_cache.enable || !m_cache.useVertexCache)
         {
-#ifndef SFML_OPENGL_ES
             glCheck(glLoadIdentity());
+        }
 #else
             Shader* shader = const_cast<Shader*>(states.shader);
             shader->setUniform("sf_modelview", static_cast<Glsl::Mat4>(Transform::Identity.getMatrix()));
 #endif
-        }
     }
     else
     {
@@ -811,17 +830,17 @@ void RenderTarget::setupDraw(bool useVertexCache, const RenderStates& states)
 #endif
     }
 
-    // Apply the view
-    if (!m_cache.enable || m_cache.viewChanged)
-        applyCurrentView();
-
+// Apply the view
 #ifdef SFML_OPENGL_ES
     {
+        applyCurrentView();
         // Set the projection matrix
         Shader* shader = const_cast<Shader*>(states.shader);
         shader->setUniform("sf_projection", static_cast<Glsl::Mat4>(m_view.getTransform().getMatrix()));
     }
-
+#else
+    if (!m_cache.enable || m_cache.viewChanged)
+        applyCurrentView();
 #endif
 
     // Apply the blend mode
@@ -846,28 +865,6 @@ void RenderTarget::setupDraw(bool useVertexCache, const RenderStates& states)
         if (textureId != m_cache.lastTextureId)
             applyTexture(states.texture, states.shader);
     }
-
-    // Apply the shader
-    if (states.shader)
-        applyShader(states.shader);
-
-#ifdef SFML_OPENGL_ES
-
-    if (states.shader && m_cache.programChanged != states.shader->getNativeHandle())
-    {
-        m_cache.programChanged = states.shader->getNativeHandle();
-        m_cache.posAttrib = glGetAttribLocation(states.shader->getNativeHandle(), "position");
-        m_cache.colAttrib = glGetAttribLocation(states.shader->getNativeHandle(), "color");
-        m_cache.texAttrib = glGetAttribLocation(states.shader->getNativeHandle(), "texCoord");
-        if (m_cache.posAttrib >= 0)
-            glCheck(glEnableVertexAttribArray(m_cache.posAttrib));
-        if (m_cache.colAttrib >= 0)
-            glCheck(glEnableVertexAttribArray(m_cache.colAttrib));
-        if (m_cache.texAttrib >= 0)
-            glCheck(glEnableVertexAttribArray(m_cache.texAttrib));
-    }
-
-#endif
 
 }
 

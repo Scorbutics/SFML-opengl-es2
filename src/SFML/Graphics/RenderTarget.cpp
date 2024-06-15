@@ -773,18 +773,13 @@ void RenderTarget::setupDraw(bool useVertexCache, const RenderStates& states)
         resetGLStates();
 
 #ifdef SFML_OPENGL_ES
-
-    if (!states.shader && !states.texture)
-    {
+    // Force a default shader if not defined
+    // If it was previously loaded as default, also reforce it, because we can go from a render target without texture
+    // to a render target with texture between 2 calls
+    if (!states.shader || states.shader == &Shader::getDefaultShader() || states.shader == &Shader::getDefaultTexShader()) {
         const Shader*& shader = const_cast<const Shader*&>(states.shader);
-        shader = &Shader::getDefaultShader();
+        shader = (!states.texture) ? &Shader::getDefaultShader() : &Shader::getDefaultTexShader();
     }
-    else if (!states.shader && states.texture)
-    {
-        const Shader*& shader = const_cast<const Shader*&>(states.shader);
-        shader = &Shader::getDefaultTexShader();
-    }
-
 #endif
     // Apply the shader
     if (states.shader)

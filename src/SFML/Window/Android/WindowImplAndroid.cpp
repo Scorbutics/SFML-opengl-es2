@@ -33,6 +33,8 @@
 #include <SFML/System/Err.hpp>
 #include <android/looper.h>
 
+#include <iostream>
+
 // Define missing constants for older API levels
 #if __ANDROID_API__ < 13
     #define AMOTION_EVENT_ACTION_HOVER_MOVE 0x00000007
@@ -255,11 +257,19 @@ int WindowImplAndroid::processEvent(int /* fd */, int /* events */, void* /* dat
         int handled = 0;
 
         int32_t type = AInputEvent_getType(_event);
+        int32_t source = AInputEvent_getSource(_event);
 
         if (type == AINPUT_EVENT_TYPE_KEY)
         {
             int32_t action = AKeyEvent_getAction(_event);
             int32_t key = AKeyEvent_getKeyCode(_event);
+            if (((source & AINPUT_SOURCE_GAMEPAD) == AINPUT_SOURCE_GAMEPAD) || ((source & AINPUT_SOURCE_JOYSTICK) == AINPUT_SOURCE_JOYSTICK))
+            {
+                std::cerr << "GAMEPAD KEY EVENT!" << std::endl;
+                // gameplay::Platform::gamepadButtonPressedEventInternal(deviceId, gameplay::getGamepadButtonMapping(keycode));
+                // or
+                // gameplay::Platform::gamepadButtonReleasedEventInternal(deviceId, gameplay::getGamepadButtonMapping(keycode));
+            }
 
             if ((action == AKEY_EVENT_ACTION_DOWN || action == AKEY_EVENT_ACTION_UP || action == AKEY_EVENT_ACTION_MULTIPLE) &&
                 key != AKEYCODE_VOLUME_UP && key != AKEYCODE_VOLUME_DOWN)
@@ -271,36 +281,90 @@ int WindowImplAndroid::processEvent(int /* fd */, int /* events */, void* /* dat
         {
             int32_t action = AMotionEvent_getAction(_event);
 
-            switch (action & AMOTION_EVENT_ACTION_MASK)
+            if ((source & AINPUT_SOURCE_JOYSTICK) == AINPUT_SOURCE_JOYSTICK)
             {
-                case AMOTION_EVENT_ACTION_SCROLL:
+                std::cerr << "JOYSTICK EVENT !" << std::endl;
+            /*
+                // DPAD handling (axis hats)
+                float xaxis = AMotionEvent_getAxisValue(event, AMOTION_EVENT_AXIS_HAT_X, 0);
+                float yaxis = AMotionEvent_getAxisValue(event, AMOTION_EVENT_AXIS_HAT_Y, 0);
+                if (xaxis == -1.0f)
                 {
-                    handled = processScrollEvent(_event, states);
-                    break;
+                    gameplay::Platform::gamepadButtonPressedEventInternal(deviceId, gameplay::Gamepad::BUTTON_LEFT);
+                }
+                else if(xaxis == 1.0f)
+                {
+                    gameplay::Platform::gamepadButtonPressedEventInternal(deviceId, gameplay::Gamepad::BUTTON_RIGHT);
+                }
+                else if (xaxis == 0.0f)
+                {
+                    gameplay::Platform::gamepadButtonReleasedEventInternal(deviceId, gameplay::Gamepad::BUTTON_LEFT);
+                    gameplay::Platform::gamepadButtonReleasedEventInternal(deviceId, gameplay::Gamepad::BUTTON_RIGHT);
                 }
 
-                // todo: should hover_move indeed trigger the event?
-                // case AMOTION_EVENT_ACTION_HOVER_MOVE:
-                case AMOTION_EVENT_ACTION_MOVE:
+                if(yaxis == -1.0f)
                 {
-                    handled = processMotionEvent(_event, states);
-                    break;
+                    gameplay::Platform::gamepadButtonPressedEventInternal(deviceId, gameplay::Gamepad::BUTTON_UP);
+                }
+                else if(yaxis == 1.0f)
+                {
+                    gameplay::Platform::gamepadButtonPressedEventInternal(deviceId, gameplay::Gamepad::BUTTON_DOWN);
+                }
+                else if (yaxis == 0.0f)
+                {
+                    gameplay::Platform::gamepadButtonReleasedEventInternal(deviceId, gameplay::Gamepad::BUTTON_UP);
+                    gameplay::Platform::gamepadButtonReleasedEventInternal(deviceId, gameplay::Gamepad::BUTTON_DOWN);
                 }
 
-                // todo: investigate AMOTION_EVENT_OUTSIDE
-                case AMOTION_EVENT_ACTION_POINTER_DOWN:
-                case AMOTION_EVENT_ACTION_DOWN:
-                {
-                    handled = processPointerEvent(true, _event, states);
-                    break;
-                }
+                // Trigger handling
+                float leftTrigger = AMotionEvent_getAxisValue(event, AMOTION_EVENT_AXIS_BRAKE, 0);
+                gameplay::Platform::gamepadTriggerChangedEventInternal(deviceId, 0, leftTrigger);
+                float rightTrigger = AMotionEvent_getAxisValue(event, AMOTION_EVENT_AXIS_GAS, 0);
+                gameplay::Platform::gamepadTriggerChangedEventInternal(deviceId, 1, rightTrigger);
 
-                case AMOTION_EVENT_ACTION_POINTER_UP:
-                case AMOTION_EVENT_ACTION_UP:
-                case AMOTION_EVENT_ACTION_CANCEL:
+                // Joystick handling
+                float fuzz = 0.15f;
+                float x = AMotionEvent_getAxisValue(event, AMOTION_EVENT_AXIS_X, 0);
+                float y = -AMotionEvent_getAxisValue(event, AMOTION_EVENT_AXIS_Y, 0);
+                gameplay::Platform::gamepadJoystickChangedEventInternal(deviceId, 0, clampFuzz(x, fuzz), clampFuzz(y, fuzz));
+                float z = AMotionEvent_getAxisValue(event, AMOTION_EVENT_AXIS_Z, 0);
+                float rz = -AMotionEvent_getAxisValue(event, AMOTION_EVENT_AXIS_RZ, 0);
+                gameplay::Platform::gamepadJoystickChangedEventInternal(deviceId, 1, clampFuzz(z, fuzz), clampFuzz(rz, fuzz));
+            */
+            }
+            else
+            {
+                switch (action & AMOTION_EVENT_ACTION_MASK)
                 {
-                    handled = processPointerEvent(false, _event, states);
-                    break;
+                    case AMOTION_EVENT_ACTION_SCROLL:
+                    {
+                        handled = processScrollEvent(_event, states);
+                        break;
+                    }
+
+                    // todo: should hover_move indeed trigger the event?
+                    // case AMOTION_EVENT_ACTION_HOVER_MOVE:
+                    case AMOTION_EVENT_ACTION_MOVE:
+                    {
+                        handled = processMotionEvent(_event, states);
+                        break;
+                    }
+
+                    // todo: investigate AMOTION_EVENT_OUTSIDE
+                    case AMOTION_EVENT_ACTION_POINTER_DOWN:
+                    case AMOTION_EVENT_ACTION_DOWN:
+                    {
+                        handled = processPointerEvent(true, _event, states);
+                        break;
+                    }
+
+                    case AMOTION_EVENT_ACTION_POINTER_UP:
+                    case AMOTION_EVENT_ACTION_UP:
+                    case AMOTION_EVENT_ACTION_CANCEL:
+                    {
+                        handled = processPointerEvent(false, _event, states);
+                        break;
+                    }
                 }
             }
 

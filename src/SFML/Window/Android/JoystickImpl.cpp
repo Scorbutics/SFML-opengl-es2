@@ -26,7 +26,7 @@
 // Headers
 ////////////////////////////////////////////////////////////
 #include <SFML/Window/JoystickImpl.hpp>
-
+#include <iostream>
 
 namespace sf
 {
@@ -36,6 +36,7 @@ namespace priv
 void JoystickImpl::initialize()
 {
     // To implement
+    std::cerr << "JoystickImpl initialize" << std::endl;
 }
 
 
@@ -44,6 +45,7 @@ void JoystickImpl::initialize()
 void JoystickImpl::cleanup()
 {
     // To implement
+    std::cerr << "JoystickImpl cleanup" << std::endl;
 }
 
 
@@ -58,6 +60,7 @@ bool JoystickImpl::isConnected(unsigned int /* index */)
 ////////////////////////////////////////////////////////////
 bool JoystickImpl::open(unsigned int /* index */)
 {
+    std::cerr << "JoystickImpl open" << std::endl;
     // To implement
     return false;
 }
@@ -66,6 +69,7 @@ bool JoystickImpl::open(unsigned int /* index */)
 ////////////////////////////////////////////////////////////
 void JoystickImpl::close()
 {
+    std::cerr << "JoystickImpl close" << std::endl;
     // To implement
 }
 
@@ -73,6 +77,7 @@ void JoystickImpl::close()
 ////////////////////////////////////////////////////////////
 JoystickCaps JoystickImpl::getCapabilities() const
 {
+    std::cerr << "JoystickImpl getCapabilities" << std::endl;
     // To implement
     return JoystickCaps();
 }
@@ -81,6 +86,7 @@ JoystickCaps JoystickImpl::getCapabilities() const
 ////////////////////////////////////////////////////////////
 Joystick::Identification JoystickImpl::getIdentification() const
 {
+    std::cerr << "JoystickImpl getIdentification" << std::endl;
     return m_identification;
 }
 
@@ -88,6 +94,7 @@ Joystick::Identification JoystickImpl::getIdentification() const
 ////////////////////////////////////////////////////////////
 JoystickState JoystickImpl::update()
 {
+    std::cerr << "JoystickImpl update" << std::endl;
     // To implement
     return JoystickState();
 }

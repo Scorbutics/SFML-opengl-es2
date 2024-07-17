@@ -28,10 +28,13 @@
 ////////////////////////////////////////////////////////////
 #include <SFML/Window/WindowStyle.hpp> // important to be included first (conflict with None)
 #include <SFML/Window/Android/WindowImplAndroid.hpp>
+#include <SFML/Window/Android/JoystickImpl.hpp>
 #include <SFML/Window/Event.hpp>
 #include <SFML/System/Lock.hpp>
 #include <SFML/System/Err.hpp>
 #include <android/looper.h>
+
+#include <iostream>
 
 // Define missing constants for older API levels
 #if __ANDROID_API__ < 13
@@ -255,13 +258,17 @@ int WindowImplAndroid::processEvent(int /* fd */, int /* events */, void* /* dat
         int handled = 0;
 
         int32_t type = AInputEvent_getType(_event);
+        int32_t source = AInputEvent_getSource(_event);
 
         if (type == AINPUT_EVENT_TYPE_KEY)
         {
             int32_t action = AKeyEvent_getAction(_event);
             int32_t key = AKeyEvent_getKeyCode(_event);
-
-            if ((action == AKEY_EVENT_ACTION_DOWN || action == AKEY_EVENT_ACTION_UP || action == AKEY_EVENT_ACTION_MULTIPLE) &&
+            if (((source & AINPUT_SOURCE_GAMEPAD) == AINPUT_SOURCE_GAMEPAD) || ((source & AINPUT_SOURCE_JOYSTICK) == AINPUT_SOURCE_JOYSTICK))
+            {
+                handled = processJoystickKeyEvent(_event, states);
+            }
+            else if ((action == AKEY_EVENT_ACTION_DOWN || action == AKEY_EVENT_ACTION_UP || action == AKEY_EVENT_ACTION_MULTIPLE) &&
                 key != AKEYCODE_VOLUME_UP && key != AKEYCODE_VOLUME_DOWN)
             {
                 handled = processKeyEvent(_event, states);
@@ -271,36 +278,43 @@ int WindowImplAndroid::processEvent(int /* fd */, int /* events */, void* /* dat
         {
             int32_t action = AMotionEvent_getAction(_event);
 
-            switch (action & AMOTION_EVENT_ACTION_MASK)
+            if ((source & AINPUT_SOURCE_JOYSTICK) == AINPUT_SOURCE_JOYSTICK)
             {
-                case AMOTION_EVENT_ACTION_SCROLL:
+                handled = processJoystickMotionEvent(_event, states);
+            }
+            else
+            {
+                switch (action & AMOTION_EVENT_ACTION_MASK)
                 {
-                    handled = processScrollEvent(_event, states);
-                    break;
-                }
+                    case AMOTION_EVENT_ACTION_SCROLL:
+                    {
+                        handled = processScrollEvent(_event, states);
+                        break;
+                    }
 
-                // todo: should hover_move indeed trigger the event?
-                // case AMOTION_EVENT_ACTION_HOVER_MOVE:
-                case AMOTION_EVENT_ACTION_MOVE:
-                {
-                    handled = processMotionEvent(_event, states);
-                    break;
-                }
+                    // todo: should hover_move indeed trigger the event?
+                    // case AMOTION_EVENT_ACTION_HOVER_MOVE:
+                    case AMOTION_EVENT_ACTION_MOVE:
+                    {
+                        handled = processMotionEvent(_event, states);
+                        break;
+                    }
 
-                // todo: investigate AMOTION_EVENT_OUTSIDE
-                case AMOTION_EVENT_ACTION_POINTER_DOWN:
-                case AMOTION_EVENT_ACTION_DOWN:
-                {
-                    handled = processPointerEvent(true, _event, states);
-                    break;
-                }
+                    // todo: investigate AMOTION_EVENT_OUTSIDE
+                    case AMOTION_EVENT_ACTION_POINTER_DOWN:
+                    case AMOTION_EVENT_ACTION_DOWN:
+                    {
+                        handled = processPointerEvent(true, _event, states);
+                        break;
+                    }
 
-                case AMOTION_EVENT_ACTION_POINTER_UP:
-                case AMOTION_EVENT_ACTION_UP:
-                case AMOTION_EVENT_ACTION_CANCEL:
-                {
-                    handled = processPointerEvent(false, _event, states);
-                    break;
+                    case AMOTION_EVENT_ACTION_POINTER_UP:
+                    case AMOTION_EVENT_ACTION_UP:
+                    case AMOTION_EVENT_ACTION_CANCEL:
+                    {
+                        handled = processPointerEvent(false, _event, states);
+                        break;
+                    }
                 }
             }
 
@@ -312,6 +326,53 @@ int WindowImplAndroid::processEvent(int /* fd */, int /* events */, void* /* dat
     return 1;
 }
 
+int WindowImplAndroid::processJoystickMotionEvent(AInputEvent* _event, ActivityStates& states)
+{
+    Int32 deviceId = AInputEvent_getDeviceId(_event);
+
+    JoystickImpl::pushEvent(JoystickEvent { deviceId, JoystickEventType::Motion, Joystick::ButtonCount, false, JoystickMotionData {
+        AMotionEvent_getAxisValue(_event, AMOTION_EVENT_AXIS_HAT_X, 0),
+        AMotionEvent_getAxisValue(_event, AMOTION_EVENT_AXIS_HAT_Y, 0),
+        AMotionEvent_getAxisValue(_event, AMOTION_EVENT_AXIS_LTRIGGER, 0),
+        AMotionEvent_getAxisValue(_event, AMOTION_EVENT_AXIS_RTRIGGER, 0),
+        AMotionEvent_getAxisValue(_event, AMOTION_EVENT_AXIS_X, 0),
+        AMotionEvent_getAxisValue(_event, AMOTION_EVENT_AXIS_Y, 0),
+        AMotionEvent_getAxisValue(_event, AMOTION_EVENT_AXIS_Z, 0),
+        AMotionEvent_getAxisValue(_event, AMOTION_EVENT_AXIS_RZ, 0)
+    } });
+
+    return 1;
+}
+
+int WindowImplAndroid::processJoystickKeyEvent(AInputEvent* _event, ActivityStates& states)
+{
+    Int32 deviceId = AInputEvent_getDeviceId(_event);
+    int32_t key = AKeyEvent_getKeyCode(_event);
+    bool pressed = false;
+
+    switch (AKeyEvent_getAction(_event))
+    {
+        case AKEY_EVENT_ACTION_DOWN:
+            pressed = true;
+            break;
+        case AKEY_EVENT_ACTION_UP:
+            pressed = false;
+            break;
+        case AKEY_EVENT_ACTION_MULTIPLE:
+            // What to do ????
+            std::cerr << "Error: unable to handle multiple joystick key event" << std::endl;
+            break;
+    }
+
+    if (key >= AKEYCODE_BUTTON_A && key < AKEYCODE_ESCAPE)
+    {
+        unsigned int index = key - AKEYCODE_BUTTON_A;
+        JoystickImpl::pushEvent(JoystickEvent { deviceId, JoystickEventType::Key, index, pressed });
+        return 1;
+    }
+
+    return 0;
+}
 
 ////////////////////////////////////////////////////////////
 int WindowImplAndroid::processScrollEvent(AInputEvent* _event, ActivityStates& states)
@@ -583,11 +644,6 @@ Keyboard::Key WindowImplAndroid::androidKeyToSF(int32_t key)
         case AKEYCODE_9:                  return Keyboard::Num9;
         case AKEYCODE_STAR:
         case AKEYCODE_POUND:
-        case AKEYCODE_DPAD_UP:
-        case AKEYCODE_DPAD_DOWN:
-        case AKEYCODE_DPAD_LEFT:
-        case AKEYCODE_DPAD_RIGHT:
-        case AKEYCODE_DPAD_CENTER:
         case AKEYCODE_VOLUME_UP:
         case AKEYCODE_VOLUME_DOWN:
         case AKEYCODE_POWER:

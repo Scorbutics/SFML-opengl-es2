@@ -25,11 +25,41 @@
 #ifndef SFML_JOYSTICKIMPLANDROID_HPP
 #define SFML_JOYSTICKIMPLANDROID_HPP
 
+#include <SFML/System/Mutex.hpp>
+#include <vector>
 
 namespace sf
 {
 namespace priv
 {
+
+struct JoystickMotionData
+{
+    float xHatAxis = 0.f;
+    float yHatAxis = 0.f;
+    float leftTrigger = 0.f;
+    float rightTrigger = 0.f;
+    float xAxis = 0.f;
+    float yAxis = 0.f;
+    float zAxis = 0.f;
+    float rzAxis = 0.f;
+};
+
+enum class JoystickEventType
+{
+    Key,
+    Motion,
+    Connection
+};
+struct JoystickEvent
+{
+    Int32 deviceId = 0;
+    JoystickEventType type;
+    unsigned int index = Joystick::ButtonCount;
+    bool pressed = false;
+    JoystickMotionData motion {};
+};
+
 ////////////////////////////////////////////////////////////
 /// \brief Android implementation of joysticks
 ///
@@ -100,12 +130,21 @@ public:
     ////////////////////////////////////////////////////////////
     JoystickState update();
 
+    /// \brief Enqueue a new event to be updated next frame
+    ///
+    ////////////////////////////////////////////////////////////
+    static void pushEvent(JoystickEvent event);
+
 private:
 
     ////////////////////////////////////////////////////////////
     // Member data
     ////////////////////////////////////////////////////////////
-    Joystick::Identification m_identification; ///< Joystick identification
+    Joystick::Identification           m_identification;  ///< Joystick identification
+    JoystickState                      m_state;           ///< Buffered joystick state
+    unsigned int                       m_index;           ///< Device index
+    static Mutex                       eventMutex;        ///< Event mutex
+    static std::vector<JoystickEvent>  events;            ///< Events to be dispatched
 };
 
 } // namespace priv

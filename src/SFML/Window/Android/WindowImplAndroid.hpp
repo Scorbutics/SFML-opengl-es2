@@ -214,6 +214,8 @@ private:
     static int processKeyEvent(AInputEvent* _event, ActivityStates& states);
     static int processMotionEvent(AInputEvent* _event, ActivityStates& states);
     static int processPointerEvent(bool isDown, AInputEvent* event, ActivityStates& states);
+    static int processJoystickKeyEvent(AInputEvent* _event, ActivityStates& states);
+    static int processJoystickMotionEvent(AInputEvent* _event, ActivityStates& states);
 
     ////////////////////////////////////////////////////////////
     /// \brief Convert a Android key to SFML key code

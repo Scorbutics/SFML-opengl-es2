@@ -228,6 +228,16 @@ private:
     static Keyboard::Key androidKeyToSF(int32_t key);
 
     ////////////////////////////////////////////////////////////
+    /// \brief Convert a Android joystick key to SFML joystick button index
+    ///
+    /// \param symbol Android key to convert
+    ///
+    /// \return Corresponding SFML joystick button index
+    ///
+    ////////////////////////////////////////////////////////////
+    static unsigned int androidJoystickKeyToIndex(int32_t key);
+
+    ////////////////////////////////////////////////////////////
     /// \brief Get Unicode decoded from the input event
     ///
     /// \param Event Input event

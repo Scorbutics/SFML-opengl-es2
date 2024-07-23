@@ -332,7 +332,7 @@ int WindowImplAndroid::processJoystickMotionEvent(AInputEvent* _event, ActivityS
 
     JoystickImpl::pushEvent(JoystickEvent { deviceId, JoystickEventType::Motion, Joystick::ButtonCount, false, JoystickMotionData {
         AMotionEvent_getAxisValue(_event, AMOTION_EVENT_AXIS_HAT_X, 0),
-        AMotionEvent_getAxisValue(_event, AMOTION_EVENT_AXIS_HAT_Y, 0),
+        - AMotionEvent_getAxisValue(_event, AMOTION_EVENT_AXIS_HAT_Y, 0),
         AMotionEvent_getAxisValue(_event, AMOTION_EVENT_AXIS_LTRIGGER, 0),
         AMotionEvent_getAxisValue(_event, AMOTION_EVENT_AXIS_RTRIGGER, 0),
         AMotionEvent_getAxisValue(_event, AMOTION_EVENT_AXIS_X, 0),

@@ -885,7 +885,7 @@ void RenderTarget::setupDraw(bool useVertexCache, const RenderStates& states)
 
 #ifdef SFML_OPENGL_ES
 
-    if (setTexture)
+    if (setTexture || states.texture && m_cache.programChanged != usedShader->getNativeHandle())
     {
         GLfloat matrix[16] = { 1.f, 0.f, 0.f, 0.f,
                                   0.f, 1.f, 0.f, 0.f,

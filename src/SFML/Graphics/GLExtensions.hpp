@@ -181,10 +181,18 @@
     #define GLEXT_GL_DRAW_FRAMEBUFFER                 0
     #define GLEXT_GL_DRAW_FRAMEBUFFER_BINDING         0
     #define GLEXT_GL_READ_FRAMEBUFFER_BINDING         0
-
+    
     // Core since 3.0
     #define GLEXT_framebuffer_multisample             false
+#if defined(SFML_SYSTEM_SWITCH)
+    // Expose GLES 3.0 functionx to GLES 2.0 context since we are static linking without glad
+    // The Switch libGLESv2 supports those Core functions, but gl2.h doesn't declare it.
+    // We manually declare it here to avoid linker errors on debug builds.
+    extern "C" GL_APICALL void GL_APIENTRY            glRenderbufferStorageMultisample(GLenum target, GLsizei samples, GLenum internalformat, GLsizei width, GLsizei height);
+    #define GLEXT_glRenderbufferStorageMultisample    glRenderbufferStorageMultisample
+#else
     #define GLEXT_glRenderbufferStorageMultisample    glRenderbufferStorageMultisampleEXT // Placeholder to satisfy the compiler, entry point is not loaded in GLES
+#endif
     #define GLEXT_GL_MAX_SAMPLES                      0
 
     // Core since 3.0 - NV_copy_buffer
@@ -442,7 +450,6 @@
     #ifndef GL_FRAMEBUFFER_SRGB
         #define GL_FRAMEBUFFER_SRGB GL_FRAMEBUFFER_SRGB_EXT
     #endif
-
 #endif
 
 namespace sf

@@ -41,7 +41,6 @@
 
 #if defined(SFML_SYSTEM_SWITCH)
 #include <EGL/egl.h>
-#include <atomic>
 #else
 // We check for this definition in order to avoid multiple definitions of GLAD
 // entities during unity builds of SFML.
@@ -125,9 +124,6 @@ namespace
 #endif
         }
     }
-#if defined(SFML_SYSTEM_SWITCH)
-    std::atomic<int> g_resourceCount{0};
-#endif
 }
 
 
@@ -143,11 +139,6 @@ m_surface (EGL_NO_SURFACE),
 m_config  (NULL)
 {
     EglContextImpl::ensureInit();
-
-#if defined(SFML_SYSTEM_SWITCH)
-    g_resourceCount++;
-#endif
-
 
     // Get the initialized EGL display
     m_display = EglContextImpl::getInitializedDisplay();
@@ -197,11 +188,6 @@ m_surface (EGL_NO_SURFACE),
 m_config  (NULL)
 {
     EglContextImpl::ensureInit();
-
-#if defined(SFML_SYSTEM_SWITCH)
-    g_resourceCount++;
-#endif
-
 
 #ifdef SFML_SYSTEM_ANDROID
 
@@ -317,17 +303,10 @@ EglContext::~EglContext()
 #elif defined(SFML_SYSTEM_SWITCH)
     if (m_display)
     {
-        --g_resourceCount;
-
-        // Only terminate EGL if this was the LAST context
-        if (g_resourceCount == 0)
-        {
-            eglTerminate(m_display);
-        }
-        
+        eglTerminate(m_display);
         m_display = NULL;
-#endif
     }
+#endif
 }
 
 

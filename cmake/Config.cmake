@@ -69,7 +69,11 @@ elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Android")
 
     # use the OpenGL ES implementation on Android
     set(OPENGL_ES 1)
+elseif(SWITCH)
+    set(SFML_OS_SWITCH  1)
 
+    # use the OpenGL ES implementation on the Nintendo Switch
+    set(OPENGL_ES 1)
 # comparing CMAKE_SYSTEM_NAME with "CYGWIN" generates a false warning depending on the CMake version
 # let's avoid it so the actual error is more visible
 elseif(${CYGWIN})

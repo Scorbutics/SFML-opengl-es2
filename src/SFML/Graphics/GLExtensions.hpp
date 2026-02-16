@@ -29,7 +29,13 @@
 // Headers
 ////////////////////////////////////////////////////////////
 #include <SFML/Config.hpp>
+#if defined(SFML_SYSTEM_SWITCH)
+// We don't need dynamic loading on Switch
+#include <GLES2/gl2.h>
+#include <GLES2/gl2ext.h>
+#else
 #include <glad/gl.h>
+#endif
 
 #ifdef SFML_OPENGL_ES
 
@@ -161,7 +167,11 @@
     #define GLEXT_GL_FRAGMENT_SHADER                  GL_FRAGMENT_SHADER
 
     // Core since 3.0
+#if defined(SFML_SYSTEM_SWITCH)
+    #define GLEXT_packed_depth_stencil                GL_OES_packed_depth_stencil
+#else
     #define GLEXT_packed_depth_stencil                SF_GLAD_GL_OES_packed_depth_stencil
+#endif
     #define GLEXT_GL_DEPTH24_STENCIL8                 GL_DEPTH24_STENCIL8_OES
 
     // Core since 3.0
@@ -188,7 +198,11 @@
     #define GLEXT_GL_SRGB8_ALPHA8                     0
 
     // Core since 3.0 - EXT_blend_minmax
+#if defined(SFML_SYSTEM_SWITCH)
+    #define GLEXT_blend_minmax                        GL_OES_packed_depth_stencil
+#else
     #define GLEXT_blend_minmax                        SF_GLAD_GL_EXT_blend_minmax
+#endif
     #define GLEXT_GL_MIN                              GL_MIN_EXT
     #define GLEXT_GL_MAX                              GL_MAX_EXT
 
@@ -362,6 +376,7 @@
 #endif
 
     // OpenGL Versions
+#if !defined(SFML_SYSTEM_SWITCH)
     #define GLEXT_GL_VERSION_1_0                      SF_GLAD_GL_VERSION_1_0
     #define GLEXT_GL_VERSION_1_1                      SF_GLAD_GL_VERSION_1_1
     #define GLEXT_GL_VERSION_1_2                      SF_GLAD_GL_VERSION_1_2
@@ -381,6 +396,54 @@
     #define GLEXT_GL_VERSION_4_4                      SF_GLAD_GL_VERSION_4_4
     #define GLEXT_GL_VERSION_4_5                      SF_GLAD_GL_VERSION_4_5
     #define GLEXT_GL_VERSION_4_6                      SF_GLAD_GL_VERSION_4_6
+#else
+    // Switch GLES 2.0 Backend:
+    // We are using ES, so we report 0 for all Desktop GL versions.
+    // The specific features (Shaders, FBOs) are enabled via the
+    // SFML_OPENGL_ES block above.
+    #define GLEXT_GL_VERSION_1_0                      0
+    #define GLEXT_GL_VERSION_1_1                      0
+    #define GLEXT_GL_VERSION_1_2                      0
+    #define GLEXT_GL_VERSION_1_3                      0
+    #define GLEXT_GL_VERSION_1_4                      0
+    #define GLEXT_GL_VERSION_1_5                      0
+    #define GLEXT_GL_VERSION_2_0                      0
+    #define GLEXT_GL_VERSION_2_1                      0
+    #define GLEXT_GL_VERSION_3_0                      0
+    #define GLEXT_GL_VERSION_3_1                      0
+    #define GLEXT_GL_VERSION_3_2                      0
+    #define GLEXT_GL_VERSION_3_3                      0
+    #define GLEXT_GL_VERSION_4_0                      0
+    #define GLEXT_GL_VERSION_4_1                      0
+    #define GLEXT_GL_VERSION_4_2                      0
+    #define GLEXT_GL_VERSION_4_3                      0
+    #define GLEXT_GL_VERSION_4_4                      0
+    #define GLEXT_GL_VERSION_4_5                      0
+    #define GLEXT_GL_VERSION_4_6                      0
+
+    // Fix VertexBuffer.cpp: Map missing ARB types to standard GLES types
+    // The compiler confirmed 'GLsizeiptr' exists, so we alias the ARB version to it.
+    typedef GLsizeiptr GLsizeiptrARB;
+    typedef GLintptr   GLintptrARB;
+
+    // Fix RenderTextureImplFBO.cpp: Define missing Extension Flag
+    #define GL_EXT_texture_sRGB                     GLEXT_texture_sRGB
+
+    // Fix GLChecker.cpp: Define missing error flags
+    #ifndef GL_STACK_OVERFLOW
+    #define GL_STACK_OVERFLOW                       GL_STACK_OVERFLOW_KHR
+    #endif
+    #ifndef GL_STACK_UNDERFLOW
+    #define GL_STACK_UNDERFLOW                      GL_STACK_UNDERFLOW_KHR
+    #endif
+
+    // Fix RenderTarget.cpp: Map Core sRGB token to the Extension token
+    // The Switch supports sRGB framebuffers via the EXT extension.
+    #ifndef GL_FRAMEBUFFER_SRGB
+        #define GL_FRAMEBUFFER_SRGB GL_FRAMEBUFFER_SRGB_EXT
+    #endif
+
+#endif
 
 namespace sf
 {

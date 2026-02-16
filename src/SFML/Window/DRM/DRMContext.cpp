@@ -38,12 +38,16 @@
 #include <unistd.h>
 #include <xf86drm.h>
 
+#if defined(SFML_SYSTEM_SWITCH)
+#include <EGL/egl.h>
+#else
 // We check for this definition in order to avoid multiple definitions of GLAD
 // entities during unity builds of SFML.
 #ifndef SF_GLAD_EGL_IMPLEMENTATION_INCLUDED
 #define SF_GLAD_EGL_IMPLEMENTATION_INCLUDED
 #define SF_GLAD_EGL_IMPLEMENTATION
 #include <glad/egl.h>
+#endif
 #endif
 
 namespace

@@ -280,6 +280,27 @@ elseif(SFML_OS_ANDROID)
         ${INCROOT}/Android/HostedAndroidWindow.hpp
     )
     source_group("android" FILES ${PLATFORM_SRC})
+elseif(SFML_OS_SWITCH)
+    set(PLATFORM_SRC
+        ${SRCROOT}/EGLCheck.cpp
+        ${SRCROOT}/EGLCheck.hpp
+        ${SRCROOT}/EglContext.cpp
+        ${SRCROOT}/EglContext.hpp
+        ${SRCROOT}/Switch/CursorImpl.hpp
+        ${SRCROOT}/Switch/CursorImpl.cpp
+        ${SRCROOT}/Switch/ClipboardImpl.hpp
+        ${SRCROOT}/Switch/ClipboardImpl.cpp
+        ${SRCROOT}/Switch/WindowImplSwitch.hpp
+        ${SRCROOT}/Switch/WindowImplSwitch.cpp
+        ${SRCROOT}/Switch/VideoModeImpl.cpp
+        ${SRCROOT}/Switch/InputImpl.hpp
+        ${SRCROOT}/Switch/InputImpl.cpp
+        ${SRCROOT}/Switch/JoystickImpl.hpp
+        ${SRCROOT}/Switch/JoystickImpl.cpp
+        ${SRCROOT}/Switch/SensorImpl.hpp
+        ${SRCROOT}/Switch/SensorImpl.cpp
+    )
+    source_group("switch" FILES ${PLATFORM_SRC})
 endif()
 
 # define the sfml-window target
@@ -322,6 +343,7 @@ if(SFML_OS_IOS)
 
     target_link_libraries(sfml-window PRIVATE GLES)
 elseif(SFML_OS_ANDROID OR SFML_OPENGL_ES)
+    message(STATUS "SFML is configured to use OpenGL ES")
     sfml_find_package(GLES INCLUDE "GLES_INCLUDE_DIR" LINK "GLES_LIBRARY")
     sfml_find_package(EGL INCLUDE "EGL_INCLUDE_DIR" LINK "EGL_LIBRARY")
     target_link_libraries(sfml-window PRIVATE EGL)

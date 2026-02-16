@@ -44,6 +44,8 @@
     #include <SFML/Window/iOS/CursorImpl.hpp>
 #elif defined(SFML_SYSTEM_ANDROID)
     #include <SFML/Window/Android/CursorImpl.hpp>
+#elif defined(SFML_SYSTEM_SWITCH)
+    #include <SFML/Window/Switch/CursorImpl.hpp>
 #endif
 
 

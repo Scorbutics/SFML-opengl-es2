@@ -31,7 +31,11 @@
 #include <SFML/System/Mutex.hpp>
 #include <SFML/System/Lock.hpp>
 #include <SFML/System/Err.hpp>
+#if defined(SFML_SYSTEM_SWITCH)
+#include <GL/gl.h>
+#else
 #include <glad/gl.h>
+#endif
 #include <algorithm>
 #include <vector>
 #include <string>
@@ -87,6 +91,11 @@
     typedef sf::priv::EaglContext ContextType;
 
 #elif defined(SFML_SYSTEM_ANDROID)
+
+    #include <SFML/Window/EglContext.hpp>
+    typedef sf::priv::EglContext ContextType;
+
+#elif defined(SFML_SYSTEM_SWITCH)
 
     #include <SFML/Window/EglContext.hpp>
     typedef sf::priv::EglContext ContextType;

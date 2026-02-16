@@ -33,7 +33,11 @@
 #include <SFML/Window/EGLCheck.hpp>
 #include <SFML/Window/GlContext.hpp>
 #include <SFML/Window/WindowStyle.hpp> // Prevent conflict with macro None from Xlib
+#if defined(SFML_SYSTEM_SWITCH)
+#include <EGL/egl.h>
+#else
 #include <glad/egl.h>
+#endif
 #if defined(SFML_SYSTEM_LINUX) && !defined(SFML_USE_DRM)
     #include <X11/Xlib.h>
     #include <X11/Xutil.h>
@@ -111,6 +115,7 @@ public:
     ////////////////////////////////////////////////////////////
     static void ensureGladLoaded();
 
+#if !defined(SFML_SYSTEM_SWITCH)
     ////////////////////////////////////////////////////////////
     /// \brief Reload GLAD's EGL function pointers against an initialized display
     ///
@@ -126,6 +131,7 @@ public:
     ///
     ////////////////////////////////////////////////////////////
     static void reloadGladForDisplay(EGLDisplay display);
+#endif
 
     ////////////////////////////////////////////////////////////
     /// \brief Activate the context as the current target

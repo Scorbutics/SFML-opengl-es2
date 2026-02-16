@@ -108,6 +108,8 @@ elseif(SFML_OS_IOS)
     set(CMAKE_INCLUDE_PATH ${CMAKE_INCLUDE_PATH} "${PROJECT_SOURCE_DIR}/extlibs/headers/freetype2")
 elseif(SFML_OS_ANDROID)
     set(CMAKE_INCLUDE_PATH ${CMAKE_INCLUDE_PATH} "${PROJECT_SOURCE_DIR}/extlibs/headers/freetype2")
+elseif(SFML_OS_SWITCH)
+    set(CMAKE_INCLUDE_PATH ${CMAKE_INCLUDE_PATH} "${PORTLIBS}/include/freetype2")
 endif()
 
 # find external libraries

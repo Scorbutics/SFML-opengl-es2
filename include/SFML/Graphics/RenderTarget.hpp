@@ -392,12 +392,16 @@ protected:
     void initialize();
 
 private:
-
+#ifndef SFML_OPENGL_ES
     ////////////////////////////////////////////////////////////
     /// \brief Apply the current view
+    /// \note This function is not used on OpenGL ES and can cause
+    /// some compilation issues on OpenGL ES plaforms missing the 
+    /// following definitions: GL_MODELVIEW, GL_PROJECTION, GL_TEXTURE, glMatrixMode, glLoadIdentity, glLoadMatrixf
     ///
     ////////////////////////////////////////////////////////////
     void applyCurrentView();
+#endif
 
     ////////////////////////////////////////////////////////////
     /// \brief Apply a new blending mode
@@ -407,13 +411,18 @@ private:
     ////////////////////////////////////////////////////////////
     void applyBlendMode(const BlendMode& mode);
 
+#ifndef SFML_OPENGL_ES
     ////////////////////////////////////////////////////////////
     /// \brief Apply a new transform
+    /// \note This function is not used on OpenGL ES and can cause
+    /// some compilation issues on OpenGL ES plaforms missing the 
+    /// following definitions: glLoadIdentity, glLoadMatrixf
     ///
     /// \param transform Transform to apply
     ///
     ////////////////////////////////////////////////////////////
     void applyTransform(const Transform& transform);
+#endif
 
     ////////////////////////////////////////////////////////////
     /// \brief Apply a new texture

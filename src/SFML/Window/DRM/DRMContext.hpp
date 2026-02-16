@@ -33,7 +33,11 @@
 #include <SFML/Window/EGLCheck.hpp>
 #include <SFML/Window/GlContext.hpp>
 #include <SFML/Window/VideoMode.hpp>
+#if defined(SFML_SYSTEM_SWITCH)
+#include <EGL/egl.h>
+#else
 #include <glad/egl.h>
+#endif
 #include <gbm.h>
 #include <xf86drmMode.h>
 

@@ -658,6 +658,7 @@ void RenderTarget::initialize()
 
 
 ////////////////////////////////////////////////////////////
+#ifndef SFML_OPENGL_ES
 void RenderTarget::applyCurrentView()
 {
     // Set the viewport
@@ -674,6 +675,7 @@ void RenderTarget::applyCurrentView()
 
     m_cache.viewChanged = false;
 }
+#endif
 
 
 ////////////////////////////////////////////////////////////
@@ -732,6 +734,7 @@ void RenderTarget::applyBlendMode(const BlendMode& mode)
 
 
 ////////////////////////////////////////////////////////////
+#ifndef SFML_OPENGL_ES
 void RenderTarget::applyTransform(const Transform& transform)
 {
     // No need to call glMatrixMode(GL_MODELVIEW), it is always the
@@ -741,6 +744,7 @@ void RenderTarget::applyTransform(const Transform& transform)
     else
         glCheck(glLoadMatrixf(transform.getMatrix()));
 }
+#endif
 
 
 ////////////////////////////////////////////////////////////

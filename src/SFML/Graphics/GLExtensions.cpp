@@ -29,12 +29,17 @@
 #include <SFML/Window/Context.hpp>
 #include <SFML/System/Err.hpp>
 
+#if defined(SFML_SYSTEM_SWITCH)
+#include <EGL/egl.h>
+#include <EGL/eglext.h>
+#else
 // We check for this definition in order to avoid multiple definitions of GLAD
 // entities during unity builds of SFML.
 #ifndef SF_GLAD_GL_IMPLEMENTATION_INCLUDED
 #define SF_GLAD_GL_IMPLEMENTATION_INCLUDED
 #define SF_GLAD_GL_IMPLEMENTATION
 #include <glad/gl.h>
+#endif
 #endif
 
 #if !defined(GL_MAJOR_VERSION)
@@ -57,11 +62,13 @@ void ensureExtensionsInit()
     if (!initialized)
     {
         initialized = true;
-
+        
+#if !defined(SFML_SYSTEM_SWITCH)
 #ifdef SFML_OPENGL_ES
         gladLoadGLES2(reinterpret_cast<GLADloadfunc>(sf::Context::getFunction));
 #else
         gladLoadGL(reinterpret_cast<GLADloadfunc>(sf::Context::getFunction));
+#endif
 #endif
 
         // Retrieve the context version number

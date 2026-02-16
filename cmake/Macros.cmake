@@ -55,7 +55,8 @@ macro(sfml_add_library target)
     endif()
 
     # create the target
-    if (THIS_STATIC)
+    get_property(SUPPORT_SHARED_LIBS GLOBAL PROPERTY TARGET_SUPPORTS_SHARED_LIBS)
+    if (THIS_STATIC OR NOT SUPPORT_SHARED_LIBS)
         add_library(${target} STATIC ${THIS_SOURCES})
     else()
         add_library(${target} ${THIS_SOURCES})

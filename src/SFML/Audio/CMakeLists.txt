@@ -65,6 +65,9 @@ elseif(SFML_OS_MACOSX)
 elseif(SFML_OS_ANDROID)
     set(CMAKE_INCLUDE_PATH ${CMAKE_INCLUDE_PATH} "${PROJECT_SOURCE_DIR}/extlibs/headers/AL")
     set(CMAKE_INCLUDE_PATH ${CMAKE_INCLUDE_PATH} "${PROJECT_SOURCE_DIR}/extlibs/android")
+elseif(SFML_OS_SWITCH)
+    # why the F would extended CMAKE_INCLUDE_PATH not work here? I have no idea, but it doesn't
+    include_directories("${PORTLIBS}/include/AL/")
 endif()
 
 # find external libraries

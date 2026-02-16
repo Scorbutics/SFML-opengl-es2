@@ -103,6 +103,11 @@
 
     #endif
 
+#elif defined(__SWITCH__)
+
+    // Nintendo Switch
+    #define SFML_SYSTEM_SWITCH
+
 #else
 
     // Unsupported system

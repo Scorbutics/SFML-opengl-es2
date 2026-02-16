@@ -39,12 +39,17 @@
     #include <X11/Xlib.h>
 #endif
 
+#if defined(SFML_SYSTEM_SWITCH)
+#include <EGL/egl.h>
+#include <atomic>
+#else
 // We check for this definition in order to avoid multiple definitions of GLAD
 // entities during unity builds of SFML.
 #ifndef SF_GLAD_EGL_IMPLEMENTATION_INCLUDED
 #define SF_GLAD_EGL_IMPLEMENTATION_INCLUDED
 #define SF_GLAD_EGL_IMPLEMENTATION
 #include <glad/egl.h>
+#endif
 #endif
 
 namespace
@@ -100,8 +105,10 @@ namespace
         ////////////////////////////////////////////////////////////
         void ensureInit()
         {
+#if defined(SFML_SYSTEM_SWITCH)
+            return;
+#else
             sf::Lock lock(gladMutex());
-
             static bool initialized = false;
             if (!initialized)
             {
@@ -115,8 +122,12 @@ namespace
                 // Only once loaded: another thread may be waiting on the lock
                 initialized = true;
             }
+#endif
         }
     }
+#if defined(SFML_SYSTEM_SWITCH)
+    std::atomic<int> g_resourceCount{0};
+#endif
 }
 
 
@@ -133,6 +144,11 @@ m_config  (NULL)
 {
     EglContextImpl::ensureInit();
 
+#if defined(SFML_SYSTEM_SWITCH)
+    g_resourceCount++;
+#endif
+
+
     // Get the initialized EGL display
     m_display = EglContextImpl::getInitializedDisplay();
 
@@ -148,7 +164,25 @@ m_config  (NULL)
         EGL_NONE
     };
 
+#if defined(SFML_SYSTEM_SWITCH)    
+    // Clear previous errors
+    while (eglGetError() != EGL_SUCCESS);
+
+    // Try to create a PBuffer (Tiny 1x1 surface)
+    m_surface = eglCreatePbufferSurface(m_display, m_config, attrib_list);
+
+    // Check for failure (EGL_BAD_MATCH or EGL_BAD_CONFIG)
+    if (m_surface == EGL_NO_SURFACE || eglGetError() != EGL_SUCCESS)
+    {
+        // If PBuffers are not supported, we fall back to a "Surfaceless Context".
+        // This is valid in EGL 1.5 or via KHR extensions, and widely supported 
+        // by drivers for internal dummy contexts.
+        sf::err() << "Notice: PBuffer failed. Using Surfaceless Dummy Context." << std::endl;
+        m_surface = EGL_NO_SURFACE; 
+    }
+#else
     eglCheck(m_surface = eglCreatePbufferSurface(m_display, m_config, attrib_list));
+#endif
 
     // Create EGL context
     createContext(shared);
@@ -163,6 +197,11 @@ m_surface (EGL_NO_SURFACE),
 m_config  (NULL)
 {
     EglContextImpl::ensureInit();
+
+#if defined(SFML_SYSTEM_SWITCH)
+    g_resourceCount++;
+#endif
+
 
 #ifdef SFML_SYSTEM_ANDROID
 
@@ -184,10 +223,12 @@ m_config  (NULL)
     // Create EGL context
     createContext(shared);
 
-#if !defined(SFML_SYSTEM_ANDROID)
+#if defined(SFML_SYSTEM_ANDROID) && !defined(SFML_SYSTEM_SWITCH)
     // Create EGL surface (except on Android because the window is created
     // asynchronously, its activity manager will call it for us)
     createSurface(owner->getSystemHandle());
+#elif defined(SFML_SYSTEM_SWITCH)
+    createSurface(nwindowGetDefault());
 #else
     (void) owner;
     // On Android with the hosted-Activity flow (sf::android::prepareHostedActivity
@@ -273,7 +314,20 @@ EglContext::~EglContext()
             states->context = NULL;
         }
     }
+#elif defined(SFML_SYSTEM_SWITCH)
+    if (m_display)
+    {
+        --g_resourceCount;
+
+        // Only terminate EGL if this was the LAST context
+        if (g_resourceCount == 0)
+        {
+            eglTerminate(m_display);
+        }
+        
+        m_display = NULL;
 #endif
+    }
 }
 
 
@@ -296,6 +350,7 @@ void EglContext::ensureGladLoaded()
 }
 
 
+#if !defined(SFML_SYSTEM_SWITCH)
 ////////////////////////////////////////////////////////////
 void EglContext::reloadGladForDisplay(EGLDisplay display)
 {
@@ -305,17 +360,21 @@ void EglContext::reloadGladForDisplay(EGLDisplay display)
 
     gladLoaderLoadEGL(display);
 }
+#endif
 
 
 ////////////////////////////////////////////////////////////
 bool EglContext::makeCurrent(bool current)
 {
+    // If we are in "Surfaceless Mode" (m_surface is NO_SURFACE), we pass EGL_NO_SURFACE to eglMakeCurrent.
+#if !defined(SFML_SYSTEM_SWITCH)
     // Binding needs a surface; releasing does not. Refusing to release
     // without a surface left the context current on a thread about to exit
     // (hosted mode tears the surface down asynchronously), and the next
     // render thread then failed every eglMakeCurrent with EGL_BAD_ACCESS.
     if (current && m_surface == EGL_NO_SURFACE)
         return false;
+#endif
 
     EGLBoolean result = EGL_FALSE;
 
@@ -412,6 +471,25 @@ EGLConfig EglContext::getBestConfig(EGLDisplay display, unsigned int bitsPerPixe
 {
     EglContextImpl::ensureInit();
 
+#ifdef SFML_SYSTEM_SWITCH
+    const EGLint attributes[] = {
+        // We linked libGLESv2, so we must ask for ES.
+        EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT,
+
+        // PBUFFER_BIT is not supported on Switch, and we don't need it since 
+        // we support Surfaceless Contexts, so we only ask for WINDOW_BIT.
+        EGL_SURFACE_TYPE, EGL_WINDOW_BIT,
+
+        // Standard Switch color depths
+        EGL_RED_SIZE,     8,
+        EGL_GREEN_SIZE,   8,
+        EGL_BLUE_SIZE,    8,
+        EGL_ALPHA_SIZE,   8,
+        EGL_DEPTH_SIZE,   24,
+        EGL_STENCIL_SIZE, 8,
+        EGL_NONE
+    };
+#else
     // Set our video settings constraint
     const EGLint attributes[] = {
         EGL_BUFFER_SIZE, static_cast<EGLint>(bitsPerPixel),
@@ -423,6 +501,7 @@ EGLConfig EglContext::getBestConfig(EGLDisplay display, unsigned int bitsPerPixe
         EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT,
         EGL_NONE
     };
+#endif
 
     EGLint configCount;
     EGLConfig configs[1];

@@ -835,13 +835,23 @@ bool Shader::isGeometryAvailable()
 ////////////////////////////////////////////////////////////
 const Shader& Shader::getDefaultShader()
 {
+#if defined(SFML_SYSTEM_SWITCH)
+    // On switch deleting the default shader might happens after the OpenGL context is destroyed, which 
+    // causes a crash. To avoid this, we never delete the default shader on switch.
+     static Shader* instance = new Shader;
+#else
     static Shader instance;
+#endif
     static bool first = true;
 
     if (first)
     {
 #ifdef SFML_OPENGL_ES
+#if defined(SFML_SYSTEM_SWITCH)
+        instance->loadFromMemory(
+#else
         instance.loadFromMemory(
+#endif
             "#version 100\n"
             "attribute vec2 position;"
             "attribute vec4 color;"
@@ -882,20 +892,34 @@ const Shader& Shader::getDefaultShader()
         first = false;
     }
 
+#if defined(SFML_SYSTEM_SWITCH)
+    return *instance;
+#else
     return instance;
+#endif
 }
 
 
 ////////////////////////////////////////////////////////////
 const Shader& Shader::getDefaultTexShader()
 {
+#if defined(SFML_SYSTEM_SWITCH)
+    // On switch deleting the default shader might happens after the OpenGL context is destroyed, which 
+    // causes a crash. To avoid this, we never delete the default shader on switch.
+     static Shader* instance = new Shader;
+#else
     static Shader instance;
+#endif    
     static bool first = true;
 
     if (first)
     {
 #ifdef SFML_OPENGL_ES
+#if defined(SFML_SYSTEM_SWITCH)
+        instance->loadFromMemory(
+#else
         instance.loadFromMemory(
+#endif
             "#version 100\n"
             "attribute vec2 position;"
             "attribute vec4 color;"
@@ -960,7 +984,11 @@ const Shader& Shader::getDefaultTexShader()
         first = false;
     }
 
+#if defined(SFML_SYSTEM_SWITCH)
+    return *instance;
+#else
     return instance;
+#endif
 }
 
 

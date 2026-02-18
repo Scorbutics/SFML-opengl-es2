@@ -16,7 +16,8 @@ find_library(VORBIS_LIBRARY NAMES libvorbis.a
 set(VORBIS_INCLUDE_DIRS ${VORBIS_INCLUDE_DIR})
 set(VORBIS_LIBRARIES ${VORBIS_LIBRARY})
 
-find_package_handle_standard_args(VORBIS DEFAULT_MSG VORBIS_INCLUDE_DIR VORBIS_LIBRARY)
+find_package_handle_standard_args(LibVorbis DEFAULT_MSG VORBIS_INCLUDE_DIR VORBIS_LIBRARY)
+set(VORBIS_FOUND ${LibVorbis_FOUND})  # Compatibility alias
 
 if(VORBIS_FOUND)
     set(VORBIS ${VORBIS_INCLUDE_DIR}/..)

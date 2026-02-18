@@ -16,8 +16,9 @@ find_library(OPENGL_opengl_LIBRARY NAMES libEGL.a
 set(OPENGL_INCLUDE_DIRS ${OPENGL_INCLUDE_DIR})
 set(OPENGL_LIBRARIES ${OPENGL_opengl_LIBRARY})
 
-find_package_handle_standard_args(LIBOPENGL DEFAULT_MSG
+find_package_handle_standard_args(LibOpenGL DEFAULT_MSG
         OPENGL_INCLUDE_DIR OPENGL_opengl_LIBRARY)
+set(OPENGL_FOUND ${LibOpenGL_FOUND})  # Compatibility alias
 
 mark_as_advanced(OPENGL_INCLUDE_DIR OPENGL_opengl_LIBRARY)
 

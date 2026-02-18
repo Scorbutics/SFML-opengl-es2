@@ -22,7 +22,6 @@ set(OPENGL_FOUND ${LibOpenGL_FOUND})  # Compatibility alias
 
 mark_as_advanced(OPENGL_INCLUDE_DIR OPENGL_opengl_LIBRARY)
 
-message("Include dir for OPENGL: ${OPENGL_PATHS}: ${OPENGL_INCLUDE_DIRS}")
 if(OPENGL_FOUND)
     set(LIBOPENGL ${OPENGL_INCLUDE_DIR}/..)
 

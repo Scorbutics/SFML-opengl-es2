@@ -157,6 +157,7 @@ if(SFML_OS_SWITCH)
     find_package(LibOpenGL REQUIRED)
     find_package(LibVorbis REQUIRED)
     find_package(LibPng REQUIRED)
+    find_package(LibHarfbuzz REQUIRED)
 
     set (SFML_OPENGL_ES true)
 

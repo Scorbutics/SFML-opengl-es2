@@ -128,7 +128,7 @@ endif()
 sfml_find_package(Freetype INCLUDE "FREETYPE_INCLUDE_DIRS" LINK "FREETYPE_LIBRARY")
 target_link_libraries(sfml-graphics PRIVATE Freetype)
 if(SFML_OS_SWITCH)
-    target_link_libraries(sfml-graphics PRIVATE switch::png switch::harfbuzz)
+    target_link_libraries(sfml-graphics PRIVATE switch::png switch::harfbuzz switch::bz2)
 endif()
 
 # add preprocessor symbols

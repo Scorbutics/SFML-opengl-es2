@@ -158,6 +158,7 @@ if(SFML_OS_SWITCH)
     find_package(LibVorbis REQUIRED)
     find_package(LibPng REQUIRED)
     find_package(LibHarfbuzz REQUIRED)
+    find_package(LibBz2 REQUIRED)
 
     set (SFML_OPENGL_ES true)
 

@@ -127,6 +127,9 @@ endif()
 
 sfml_find_package(Freetype INCLUDE "FREETYPE_INCLUDE_DIRS" LINK "FREETYPE_LIBRARY")
 target_link_libraries(sfml-graphics PRIVATE Freetype)
+if(SFML_OS_SWITCH)
+    target_link_libraries(sfml-graphics PRIVATE switch::png)
+endif()
 
 # add preprocessor symbols
 target_compile_definitions(sfml-graphics PRIVATE "STBI_FAILURE_USERMSG")

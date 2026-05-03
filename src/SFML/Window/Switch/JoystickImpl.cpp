@@ -160,10 +160,12 @@ JoystickState JoystickImpl::update()
 
     HidAnalogStickState left = padGetStickPos(&m_state, JOYSTICK_LEFT);
     HidAnalogStickState right = padGetStickPos(&m_state, JOYSTICK_RIGHT);
-    sfmlState.axes[Joystick::X] = left.x;
-    sfmlState.axes[Joystick::Y] = left.y;
-    sfmlState.axes[Joystick::U] = right.x;
-    sfmlState.axes[Joystick::V] = right.y;
+    // SFML's contract is that JoystickMoved::position is a float in −100..+100
+    constexpr auto SCALING_FACTOR = 32767.F / 100.F;
+    sfmlState.axes[Joystick::X]   = static_cast<float>(left.x) / SCALING_FACTOR;
+    sfmlState.axes[Joystick::Y]   = static_cast<float>(left.y) / SCALING_FACTOR;
+    sfmlState.axes[Joystick::U]   = static_cast<float>(right.x) / SCALING_FACTOR;
+    sfmlState.axes[Joystick::V]   = static_cast<float>(right.y) / SCALING_FACTOR;
     // To implement
     return sfmlState;
 }

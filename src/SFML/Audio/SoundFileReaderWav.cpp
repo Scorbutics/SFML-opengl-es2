@@ -190,7 +190,13 @@ Uint64 SoundFileReaderWav::read(Int16* samples, Uint64 maxCount)
         return 0;
 
     drwav_uint64 framesRead = drwav_read_pcm_frames_s16(&m_decoder, framesToRead, samples);
-    return static_cast<Uint64>(framesRead) * m_channelCount;
+    Uint64 samplesRead = static_cast<Uint64>(framesRead) * m_channelCount;
+    err() << "[WAV debug] read: maxCount=" << maxCount
+          << " framesToRead=" << framesToRead
+          << " framesRead=" << framesRead
+          << " samplesRead=" << samplesRead
+          << std::endl;
+    return samplesRead;
 }
 
 } // namespace priv

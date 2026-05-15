@@ -156,6 +156,14 @@ bool SoundFileReaderWav::open(InputStream& stream, Info& info)
     info.sampleRate   = static_cast<unsigned int>(m_decoder.sampleRate);
     info.sampleCount  = static_cast<Uint64>(m_decoder.totalPCMFrameCount) * m_channelCount;
 
+    err() << "[WAV debug] channels=" << m_decoder.channels
+          << " sampleRate=" << m_decoder.sampleRate
+          << " bitsPerSample=" << m_decoder.bitsPerSample
+          << " totalPCMFrameCount=" << m_decoder.totalPCMFrameCount
+          << " translatedFormatTag=0x" << std::hex << m_decoder.translatedFormatTag << std::dec
+          << " -> info.sampleCount=" << info.sampleCount
+          << std::endl;
+
     return true;
 }
 

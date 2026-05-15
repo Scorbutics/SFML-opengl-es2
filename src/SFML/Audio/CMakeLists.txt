@@ -86,6 +86,9 @@ target_link_libraries(sfml-audio PRIVATE OpenAL)
 # minimp3 sources
 target_include_directories(sfml-audio SYSTEM PRIVATE "${PROJECT_SOURCE_DIR}/extlibs/headers/minimp3")
 
+# dr_wav header-only library for WAV decoding (PCM, IEEE float, A-law, mu-law, MS ADPCM, IMA ADPCM)
+target_include_directories(sfml-audio SYSTEM PRIVATE "${PROJECT_SOURCE_DIR}/extlibs/headers/dr_wav")
+
 if(SFML_OS_ANDROID)
     target_link_libraries(sfml-audio PRIVATE android OpenSLES)
 endif()

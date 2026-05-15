@@ -29,7 +29,7 @@
 // Headers
 ////////////////////////////////////////////////////////////
 #include <SFML/Audio/SoundFileReader.hpp>
-#include <string>
+#include <dr_wav.h>
 
 
 namespace sf
@@ -61,6 +61,12 @@ public:
     ///
     ////////////////////////////////////////////////////////////
     SoundFileReaderWav();
+
+    ////////////////////////////////////////////////////////////
+    /// \brief Destructor
+    ///
+    ////////////////////////////////////////////////////////////
+    ~SoundFileReaderWav();
 
     ////////////////////////////////////////////////////////////
     /// \brief Open a sound file for reading
@@ -100,22 +106,11 @@ public:
 private:
 
     ////////////////////////////////////////////////////////////
-    /// \brief Read the header of the open file
-    ///
-    /// \param info Attributes of the sound file
-    ///
-    /// \return True on success, false on error
-    ///
-    ////////////////////////////////////////////////////////////
-    bool parseHeader(Info& info);
-
-    ////////////////////////////////////////////////////////////
     // Member data
     ////////////////////////////////////////////////////////////
-    InputStream* m_stream;         //!< Source stream to read from
-    unsigned int m_bytesPerSample; //!< Size of a sample, in bytes
-    Uint64       m_dataStart;      //!< Starting position of the audio data in the open file
-    Uint64       m_dataEnd;        //!< Position one byte past the end of the audio data in the open file
+    drwav        m_decoder;        //!< dr_wav decoder state
+    bool         m_initialized;    //!< Whether m_decoder holds a live dr_wav instance
+    unsigned int m_channelCount;   //!< Cached channel count for sample/frame conversions
 };
 
 } // namespace priv

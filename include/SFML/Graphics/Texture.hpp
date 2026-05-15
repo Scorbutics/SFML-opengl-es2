@@ -583,6 +583,24 @@ public:
     ////////////////////////////////////////////////////////////
     static unsigned int getMaximumSize();
 
+    ////////////////////////////////////////////////////////////
+    /// \brief Tell whether the graphics driver supports non-power-of-two textures
+    ///
+    /// Desktop OpenGL 2.0+ exposes GL_ARB_texture_non_power_of_two; GL ES 2
+    /// drivers may or may not expose GL_OES_texture_npot. When NPOT is not
+    /// supported, SFML transparently pads texture storage to the next power
+    /// of two — callers that sample textures with non-normalized UV math or
+    /// that need to know the storage/logical size ratio can use this query
+    /// to branch their behavior per-platform.
+    ///
+    /// The first call requires an active GL context (any subsequent call
+    /// returns the cached result).
+    ///
+    /// \return True if NPOT textures are supported by the driver
+    ///
+    ////////////////////////////////////////////////////////////
+    static bool isNonPowerOfTwoSupported();
+
 private:
 
     friend class Text;

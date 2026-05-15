@@ -50,6 +50,7 @@ namespace
     {
         sf::Mutex idMutex;
         sf::Mutex maximumSizeMutex;
+        sf::Mutex npotSupportMutex;
 
         // Thread-safe unique identifier generator,
         // is used for states cache (see RenderTarget)
@@ -855,6 +856,30 @@ unsigned int Texture::getMaximumSize()
     }
 
     return static_cast<unsigned int>(size);
+}
+
+
+////////////////////////////////////////////////////////////
+bool Texture::isNonPowerOfTwoSupported()
+{
+    Lock lock(TextureImpl::npotSupportMutex);
+
+    static bool checked   = false;
+    static bool supported = false;
+
+    if (!checked)
+    {
+        checked = true;
+
+        TransientContextLock transientLock;
+
+        // Make sure that extensions are initialized so the GLEXT_* flag is live
+        sf::priv::ensureExtensionsInit();
+
+        supported = GLEXT_texture_non_power_of_two;
+    }
+
+    return supported;
 }
 
 

@@ -166,6 +166,22 @@ m_config  (NULL)
     createSurface(owner->getSystemHandle());
 #else
     (void) owner;
+    // On Android with the hosted-Activity flow (sf::android::prepareHostedActivity
+    // populated states.window before this ctor ran), the surface is already
+    // valid and the immediately-following setActive(true) needs it bound —
+    // so create it eagerly here. The legacy NativeActivity flow leaves
+    // states.window == NULL until onNativeWindowCreated fires later, in
+    // which case forwardEvent(GainedFocus) sets m_windowBeingCreated and
+    // WindowImplAndroid::processEvents picks up the deferred surface
+    // creation on the next event pump (unchanged behaviour).
+    {
+        ActivityStates& s = getActivity();
+        Lock l(s.mutex);
+        if (s.window != NULL)
+        {
+            createSurface(s.window);
+        }
+    }
 #endif
 }
 

@@ -99,8 +99,40 @@ WindowImplAndroid::WindowImplAndroid(VideoMode mode, const String& /* title */, 
     priv::ActivityStates& states = priv::getActivity();
     Lock lock(states.mutex);
 
+    // Hosted-Activity flow: the worker thread running this ctor (typically
+    // the Ruby VM dispatcher thread when sf::android::prepareHostedActivity
+    // has been used) has no Android looper attached. Without one,
+    //   - ALooper_pollAll in processEvents logs "No looper for this thread"
+    //     and returns -1 every frame,
+    //   - ASensorManager_createEventQueue refuses to register sensor queues
+    //     because states.looper is NULL.
+    // Prepare a looper on the current thread and adopt it into states.looper
+    // so the sensor and event paths have something to drive. In the
+    // NativeActivity flow, initializeMain() already set states.looper before
+    // user code reached this ctor, so we skip.
+    if (states.looper == NULL)
+    {
+        ALooper* prepared = ALooper_prepare(ALOOPER_PREPARE_ALLOW_NON_CALLBACKS);
+        if (prepared != NULL)
+        {
+            states.looper = prepared;
+            ALooper_acquire(prepared);
+        }
+    }
+
     if (style& Style::Fullscreen)
         states.fullscreen = true;
+
+    // Hosted-Activity flow: if the host already pushed an ANativeWindow*
+    // into states.window via prepareHostedActivity, adopt its real size so
+    // the immediately-following GL viewport calls see the actual surface
+    // dimensions instead of the VideoMode's requested logical size.
+    if (states.window != NULL)
+    {
+        m_size.x = static_cast<unsigned int>(ANativeWindow_getWidth(states.window));
+        m_size.y = static_cast<unsigned int>(ANativeWindow_getHeight(states.window));
+        m_hasFocus = true;
+    }
 
     WindowImplAndroid::singleInstance = this;
     states.forwardEvent = forwardEvent;

@@ -276,6 +276,8 @@ elseif(SFML_OS_ANDROID)
         ${SRCROOT}/Android/JoystickImpl.cpp
         ${SRCROOT}/Android/SensorImpl.hpp
         ${SRCROOT}/Android/SensorImpl.cpp
+        ${SRCROOT}/Android/HostedAndroidWindow.cpp
+        ${INCROOT}/Android/HostedAndroidWindow.hpp
     )
     source_group("android" FILES ${PLATFORM_SRC})
 endif()

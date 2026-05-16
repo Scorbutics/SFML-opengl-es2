@@ -52,12 +52,40 @@ namespace priv
 WindowImplAndroid* WindowImplAndroid::singleInstance = NULL;
 
 ////////////////////////////////////////////////////////////
-WindowImplAndroid::WindowImplAndroid(WindowHandle /* handle */)
+WindowImplAndroid::WindowImplAndroid(WindowHandle handle)
 : m_size(0, 0)
 , m_windowBeingCreated(false)
 , m_windowBeingDestroyed(false)
 , m_hasFocus(false)
 {
+    // Hosted-Activity flow: the caller has already populated the global
+    // ActivityStates (typically via sf::android::prepareHostedActivity)
+    // with an EGLDisplay and an ANativeWindow* obtained from a Java Surface.
+    // We adopt that handle here, mirroring the bits of the VideoMode ctor
+    // path that SFML's own NativeActivity flow performs implicitly.
+    priv::ActivityStates& states = priv::getActivity();
+    Lock lock(states.mutex);
+
+    ANativeWindow* nativeWindow = static_cast<ANativeWindow*>(handle);
+    if (nativeWindow != NULL)
+    {
+        states.window = nativeWindow;
+        m_size.x = static_cast<unsigned int>(ANativeWindow_getWidth(nativeWindow));
+        m_size.y = static_cast<unsigned int>(ANativeWindow_getHeight(nativeWindow));
+    }
+
+    WindowImplAndroid::singleInstance = this;
+    states.forwardEvent = forwardEvent;
+    states.processEvent = processEvent;
+
+    // Tell processEvents() to bind the EGL surface to states.window the next
+    // time it runs (after the RenderWindow's GlContext has registered itself
+    // into states.context). This mirrors what onNativeWindowCreated +
+    // forwardEvent(GainedFocus) does in the NativeActivity flow.
+    m_windowBeingCreated = (nativeWindow != NULL);
+    m_hasFocus = (nativeWindow != NULL);
+
+    states.initialized = true;
 }
 
 

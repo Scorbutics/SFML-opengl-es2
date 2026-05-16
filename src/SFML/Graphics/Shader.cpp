@@ -912,8 +912,22 @@ const Shader& Shader::getDefaultTexShader()
             "    gl_Position = sf_projection * sf_modelview * vec4(pos.xy, 0.0, 1.0);"
             "}",
 
+            // Use highp when the shader compiler advertises support
+            // (GL_FRAGMENT_PRECISION_HIGH is defined by the GLSL ES 1.00
+            // compiler itself when the device can do highp in fragment
+            // shaders). Without highp, sf_texCoord — which carries raw
+            // pixel-space coordinates up to the texture's actual size —
+            // would be quantized to coarse texel steps at high values,
+            // visibly degrading sprites whose source rect lies far from
+            // the texture origin (e.g. long flipbook sprite sheets near
+            // their last frames). mediump fallback preserves prior
+            // behaviour on the (rare) ES 2 devices without highp support.
             "#version 100\n"
-            "precision mediump float;"
+            "#ifdef GL_FRAGMENT_PRECISION_HIGH\n"
+            "precision highp float;\n"
+            "#else\n"
+            "precision mediump float;\n"
+            "#endif\n"
             "varying vec4 sf_color;"
             "varying vec2 sf_texCoord;"
             "uniform sampler2D sf_sampler;"

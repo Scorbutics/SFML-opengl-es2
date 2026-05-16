@@ -33,7 +33,14 @@
 #include <SFML/System/Err.hpp>
 
 #include <android/native_window.h>
+
+// We check for this definition in order to avoid multiple definitions of GLAD
+// entities during unity builds of SFML.
+#ifndef SF_GLAD_EGL_IMPLEMENTATION_INCLUDED
+#define SF_GLAD_EGL_IMPLEMENTATION_INCLUDED
+#define SF_GLAD_EGL_IMPLEMENTATION
 #include <glad/egl.h>
+#endif
 
 #include <cstddef>
 

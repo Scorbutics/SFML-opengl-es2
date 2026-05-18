@@ -100,6 +100,22 @@ void prepareHostedActivity(void* nativeWindow, int width, int height)
     for (unsigned int i = 0; i < Mouse::ButtonCount; i++)
         states->isButtonPressed[i] = false;
 
+    // Initial display value before glad is loaded — getInitializedDisplay
+    // (called from ensureGladLoaded → ensureInit) will read this and pass it
+    // through to gladLoaderLoadEGL. EGL_NO_DISPLAY is fine: glad's first pass
+    // doesn't need a real display, and we overwrite this immediately below
+    // once eglGetDisplay is resolved.
+    states->display = EGL_NO_DISPLAY;
+
+    // Register as the global FIRST. Without this, the assert in
+    // sf::priv::getActivity() fires from inside ensureGladLoaded and the
+    // process aborts silently — the call chain is
+    //   ensureGladLoaded → EglContextImpl::ensureInit
+    //                    → EglContextImpl::getInitializedDisplay
+    //                    → sf::priv::getActivity()  // asserts states != NULL
+    priv::resetActivity(states);
+    g_hostedStates = states;
+
     // Bootstrap EGL the same way SFML's NativeActivity does — this is what
     // EglContextImpl::getInitializedDisplay() expects to find later.
     // ensureGladLoaded populates the GLAD function pointers (eglGetDisplay,
@@ -111,10 +127,6 @@ void prepareHostedActivity(void* nativeWindow, int width, int height)
 
     // Redirect stderr to logcat (matches NativeActivity behavior).
     err().rdbuf(&states->logcat);
-
-    // Register as the global; subsequent priv::getActivity() calls see it.
-    priv::resetActivity(states);
-    g_hostedStates = states;
 }
 
 ////////////////////////////////////////////////////////////

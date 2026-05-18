@@ -238,6 +238,16 @@ GlFunctionPointer EglContext::getFunction(const char* name)
 
 
 ////////////////////////////////////////////////////////////
+void EglContext::ensureGladLoaded()
+{
+    // Same idempotent guard the rest of EglContext uses internally;
+    // the function-local static inside EglContextImpl::ensureInit means
+    // repeated calls are cheap.
+    EglContextImpl::ensureInit();
+}
+
+
+////////////////////////////////////////////////////////////
 bool EglContext::makeCurrent(bool current)
 {
     if (m_surface == EGL_NO_SURFACE)

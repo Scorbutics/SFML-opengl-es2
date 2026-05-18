@@ -95,6 +95,23 @@ public:
     static GlFunctionPointer getFunction(const char* name);
 
     ////////////////////////////////////////////////////////////
+    /// \brief Ensure GLAD's EGL function pointers are populated
+    ///
+    /// Public hook for callers that need raw EGL entry points (eglGetDisplay,
+    /// eglInitialize, ...) *before* the first EglContext is constructed —
+    /// notably the Android hosted-Activity bootstrap which has to populate
+    /// ActivityStates::display ahead of any RenderWindow creation.
+    /// Idempotent and thread-safe (guarded by a function-local static).
+    ///
+    /// Inside libsfml-window only EglContext.cpp defines
+    /// SF_GLAD_EGL_IMPLEMENTATION, so the loader function itself
+    /// (gladLoaderLoadEGL) is file-local to that TU; this is the only way
+    /// other TUs in the library can drive it.
+    ///
+    ////////////////////////////////////////////////////////////
+    static void ensureGladLoaded();
+
+    ////////////////////////////////////////////////////////////
     /// \brief Activate the context as the current target
     ///        for rendering
     ///

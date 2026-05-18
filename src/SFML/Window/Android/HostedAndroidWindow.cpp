@@ -27,6 +27,7 @@
 ////////////////////////////////////////////////////////////
 #include <SFML/Window/Android/HostedAndroidWindow.hpp>
 #include <SFML/Window/Android/WindowImplAndroid.hpp>
+#include <SFML/Window/EglContext.hpp>
 #include <SFML/System/Android/Activity.hpp>
 #include <SFML/System/Lock.hpp>
 #include <SFML/System/Mutex.hpp>
@@ -38,6 +39,9 @@
 // version flags) is emitted by EglContext.cpp via SF_GLAD_EGL_IMPLEMENTATION.
 // Defining the implementation macro here too would double-emit those globals
 // and break the link with duplicate-symbol errors in non-unity builds.
+// gladLoaderLoadEGL is `static` inside that impl block (so unreachable from
+// this TU); we drive it through sf::priv::EglContext::ensureGladLoaded()
+// below, which lives in the same TU as the impl.
 #include <glad/egl.h>
 
 #include <cstddef>
@@ -98,7 +102,10 @@ void prepareHostedActivity(void* nativeWindow, int width, int height)
 
     // Bootstrap EGL the same way SFML's NativeActivity does — this is what
     // EglContextImpl::getInitializedDisplay() expects to find later.
-    gladLoaderLoadEGL(EGL_DEFAULT_DISPLAY);
+    // ensureGladLoaded populates the GLAD function pointers (eglGetDisplay,
+    // eglInitialize, ...) for this TU; the loader function itself is
+    // file-local to EglContext.cpp, hence the public helper.
+    priv::EglContext::ensureGladLoaded();
     states->display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
     eglInitialize(states->display, NULL, NULL);
 

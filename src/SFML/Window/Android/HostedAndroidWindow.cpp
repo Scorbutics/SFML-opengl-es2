@@ -34,13 +34,11 @@
 
 #include <android/native_window.h>
 
-// We check for this definition in order to avoid multiple definitions of GLAD
-// entities during unity builds of SFML.
-#ifndef SF_GLAD_EGL_IMPLEMENTATION_INCLUDED
-#define SF_GLAD_EGL_IMPLEMENTATION_INCLUDED
-#define SF_GLAD_EGL_IMPLEMENTATION
+// Declarations only — the GLAD EGL implementation storage (function pointers,
+// version flags) is emitted by EglContext.cpp via SF_GLAD_EGL_IMPLEMENTATION.
+// Defining the implementation macro here too would double-emit those globals
+// and break the link with duplicate-symbol errors in non-unity builds.
 #include <glad/egl.h>
-#endif
 
 #include <cstddef>
 

@@ -147,6 +147,24 @@ WindowImplAndroid::WindowImplAndroid(VideoMode mode, const String& /* title */, 
 ////////////////////////////////////////////////////////////
 WindowImplAndroid::~WindowImplAndroid()
 {
+    // Hosted-Activity pause-resume keeps ActivityStates alive across
+    // DisplayWindow lifetimes. Release the looper ref we acquired in the
+    // ctor and clear states.looper so the NEXT WindowImplAndroid (which
+    // may live on a different render thread — e.g. a fresh Ruby thread
+    // for a new activity) prepares its OWN looper instead of inheriting
+    // ours, which belongs to a thread that may already be dead. Leaving
+    // it set produces "ALooper_pollAll: No looper for this thread!" spam
+    // from the new thread.
+    if (ActivityStates* const states = priv::getActivityStatesPtr())
+    {
+        Lock lock(states->mutex);
+        if (states->looper != NULL)
+        {
+            ALooper_release(states->looper);
+            states->looper = NULL;
+        }
+    }
+
     WindowImplAndroid::singleInstance = NULL;
 }
 
@@ -170,15 +188,32 @@ void WindowImplAndroid::processEvents()
     ActivityStates& states = getActivity();
     Lock lock(states.mutex);
 
+    // The hosted-Activity flow can leave states.context == NULL between
+    // the previous EglContext dtor (which clears it) and the next one's
+    // ctor (which sets it again from the new DisplayWindow). The native
+    // NativeActivity flow used to assume states.context was always live,
+    // hence the unguarded deref upstream — preserve the behaviour for
+    // that case but skip cleanly when there's no context yet/anymore.
+    //
+    // Likewise guard states.window for the LostFocus path: detach clears
+    // it before the corresponding GainedFocus arrives, and a stray
+    // m_windowBeingCreated tick in between would hand NULL to
+    // eglCreateWindowSurface.
     if (m_windowBeingCreated)
     {
-        states.context->createSurface(states.window);
+        if (states.context != NULL && states.window != NULL)
+        {
+            states.context->createSurface(states.window);
+        }
         m_windowBeingCreated = false;
     }
 
     if (m_windowBeingDestroyed)
     {
-        states.context->destroySurface();
+        if (states.context != NULL)
+        {
+            states.context->destroySurface();
+        }
         m_windowBeingDestroyed = false;
     }
 

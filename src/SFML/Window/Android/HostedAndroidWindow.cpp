@@ -166,6 +166,16 @@ void notifyHostedSurfaceResized(int width, int height)
 }
 
 ////////////////////////////////////////////////////////////
+void clearHostedSurfaceWindow()
+{
+    if (g_hostedStates == NULL)
+        return;
+    Lock lock(g_hostedStates->mutex);
+    g_hostedStates->window = NULL;
+}
+
+
+////////////////////////////////////////////////////////////
 void injectHostedEvent(const Event& event)
 {
     // forwardEvent is a public static on WindowImplAndroid and already

@@ -225,6 +225,31 @@ EglContext::~EglContext()
     {
         eglCheck(eglDestroySurface(m_display, m_surface));
     }
+
+#if defined(SFML_SYSTEM_ANDROID)
+    // The pause-resume hosted-Activity flow keeps ActivityStates alive
+    // across cgss::DisplayWindow lifetimes. WindowImplAndroid::processEvents
+    // dereferences states.context unconditionally; without this clear,
+    // a NEW DisplayWindow's first event pump would call into a freshly
+    // freed EglContext (this one) instead of the new one. Note this is
+    // only safe because EglContext::ctor populated states.context = this
+    // when *this* was the active context — if another EglContext has
+    // since taken over states.context, we leave it alone.
+    //
+    // Read via getActivityStatesPtr() (which returns the raw pointer
+    // and can be NULL) rather than getActivity() (which assert(!= NULL)s):
+    // on process shutdown or in test harnesses an EglContext can be
+    // destructed after releaseHostedActivity or before any hosted setup,
+    // and we don't want to abort on what is otherwise legitimate cleanup.
+    if (sf::priv::ActivityStates* const states = sf::priv::getActivityStatesPtr())
+    {
+        sf::Lock lock(states->mutex);
+        if (states->context == this)
+        {
+            states->context = NULL;
+        }
+    }
+#endif
 }
 
 

@@ -84,6 +84,20 @@ SFML_WINDOW_API void notifyHostedSurfaceResized(int width, int height);
 ////////////////////////////////////////////////////////////
 SFML_WINDOW_API void injectHostedEvent(const Event& event);
 
+////////////////////////////////////////////////////////////
+/// \brief Clear states.window without tearing down ActivityStates.
+///
+/// Used by the pause-resume path of the LiteCGSS hosted-surface bridge:
+/// when the SurfaceView's surfaceDestroyed fires, the caller releases its
+/// ANativeWindow* reference and needs SFML's cached pointer cleared so a
+/// later EGL operation can't dereference it. The next prepareHostedActivity
+/// (on surfaceCreated/Changed) repopulates states.window with the new
+/// ANativeWindow*. Unlike releaseHostedActivity, this keeps the EGL
+/// display, the GL context, and ActivityStates itself alive.
+///
+////////////////////////////////////////////////////////////
+SFML_WINDOW_API void clearHostedSurfaceWindow();
+
 } // namespace android
 } // namespace sf
 

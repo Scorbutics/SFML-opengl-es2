@@ -334,6 +334,18 @@ void EglContext::createContext(EglContext* shared)
 ////////////////////////////////////////////////////////////
 void EglContext::createSurface(EGLNativeWindowType window)
 {
+    // Belt-and-suspenders: if a prior LostFocus's destroy flag was
+    // cancelled by a back-to-back GainedFocus (see WindowImplAndroid::
+    // forwardEvent), m_surface still points to the EGLSurface backed
+    // by the now-freed ANativeWindow. Releasing it before creating the
+    // new one keeps us from leaking the stale EGLSurface and ensures
+    // eglMakeCurrent picks the right one on the next setActive.
+    if (m_surface != EGL_NO_SURFACE)
+    {
+        eglMakeCurrent(m_display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
+        eglDestroySurface(m_display, m_surface);
+        m_surface = EGL_NO_SURFACE;
+    }
     eglCheck(m_surface = eglCreateWindowSurface(m_display, m_config, window, NULL));
 }
 

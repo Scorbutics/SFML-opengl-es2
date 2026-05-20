@@ -345,11 +345,29 @@ void WindowImplAndroid::forwardEvent(const Event& event)
             WindowImplAndroid::singleInstance->m_size.x = static_cast<unsigned int>(ANativeWindow_getWidth(states.window));
             WindowImplAndroid::singleInstance->m_size.y = static_cast<unsigned int>(ANativeWindow_getHeight(states.window));
             WindowImplAndroid::singleInstance->m_windowBeingCreated = true;
+            // Cancel any still-pending destroy. The hosted-Activity flow
+            // can deliver LostFocus immediately followed by GainedFocus
+            // without the render thread pumping processEvents in between
+            // — e.g. on orientation change, where the SurfaceView's
+            // surfaceDestroyed and surfaceChanged callbacks fire one
+            // after the other on the UI thread. Without this cancellation,
+            // the next processEvents would run the create FIRST, then the
+            // destroy, immediately wiping the freshly-created EGL surface
+            // and leaving m_surface = EGL_NO_SURFACE. Subsequent
+            // setActive(true) would loop on "Failed to activate the
+            // window's context". GainedFocus is the latest signal — the
+            // pending destroy is moot, so drop the flag.
+            WindowImplAndroid::singleInstance->m_windowBeingDestroyed = false;
             WindowImplAndroid::singleInstance->m_hasFocus = true;
         }
         else if (event.type == Event::LostFocus)
         {
             WindowImplAndroid::singleInstance->m_windowBeingDestroyed = true;
+            // Symmetric to the GainedFocus case above: drop any
+            // pending create so a subsequent processEvents doesn't
+            // allocate an EGL surface against a soon-to-be-stale
+            // ANativeWindow and immediately tear it down.
+            WindowImplAndroid::singleInstance->m_windowBeingCreated = false;
             WindowImplAndroid::singleInstance->m_hasFocus = false;
         }
 

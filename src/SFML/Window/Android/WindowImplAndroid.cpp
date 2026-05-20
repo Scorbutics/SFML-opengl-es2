@@ -324,11 +324,28 @@ void WindowImplAndroid::forwardEvent(const Event& event)
             WindowImplAndroid::singleInstance->m_size.x = static_cast<unsigned int>(ANativeWindow_getWidth(states.window));
             WindowImplAndroid::singleInstance->m_size.y = static_cast<unsigned int>(ANativeWindow_getHeight(states.window));
             WindowImplAndroid::singleInstance->m_windowBeingCreated = true;
+            // Cancel any pending destroy: if a prior LostFocus left
+            // m_windowBeingDestroyed=true and processEvents never ran to
+            // honour it (e.g. the thread that owned that focus cycle has
+            // since died — the hosted-Activity flow with a process-shared
+            // sf::RenderWindow does this on every splash→game handoff),
+            // then processEvents would run the create FIRST, then the
+            // destroy, immediately wiping the freshly-created EGL surface
+            // and leaving m_surface = EGL_NO_SURFACE. Subsequent
+            // setActive(true) loops on "Failed to activate the window's
+            // context". GainedFocus is the latest signal — the destroy is
+            // moot, so drop the flag.
+            WindowImplAndroid::singleInstance->m_windowBeingDestroyed = false;
             WindowImplAndroid::singleInstance->m_hasFocus = true;
         }
         else if (event.type == Event::LostFocus)
         {
             WindowImplAndroid::singleInstance->m_windowBeingDestroyed = true;
+            // Symmetric to the GainedFocus case above: cancel any pending
+            // create. Without this, a subsequent processEvents would
+            // create an EGL surface against a soon-to-be-stale window
+            // and then immediately destroy it on the same pump.
+            WindowImplAndroid::singleInstance->m_windowBeingCreated = false;
             WindowImplAndroid::singleInstance->m_hasFocus = false;
         }
 

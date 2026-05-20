@@ -334,6 +334,20 @@ void EglContext::createContext(EglContext* shared)
 ////////////////////////////////////////////////////////////
 void EglContext::createSurface(EGLNativeWindowType window)
 {
+    // Hosted-Activity edge case: a prior LostFocus may have set
+    // m_windowBeingDestroyed without the owning thread ever pumping
+    // processEvents to honour it (typical when the splash thread
+    // dies before the game thread takes over the preserved
+    // sf::RenderWindow). m_surface in that case still points to the
+    // stale EGLSurface bound to a now-freed ANativeWindow. Destroy
+    // it before allocating the new one so we don't leak the EGLSurface
+    // and so eglMakeCurrent later picks up the right one.
+    if (m_surface != EGL_NO_SURFACE)
+    {
+        eglMakeCurrent(m_display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
+        eglDestroySurface(m_display, m_surface);
+        m_surface = EGL_NO_SURFACE;
+    }
     eglCheck(m_surface = eglCreateWindowSurface(m_display, m_config, window, NULL));
 }
 

@@ -27,7 +27,9 @@
 ////////////////////////////////////////////////////////////
 #include <SFML/Window/Android/HostedAndroidWindow.hpp>
 #include <SFML/Window/Android/WindowImplAndroid.hpp>
+#include <SFML/Window/Android/JoystickImpl.hpp>
 #include <SFML/Window/EglContext.hpp>
+#include <SFML/Window/Joystick.hpp>
 #include <SFML/System/Android/Activity.hpp>
 #include <SFML/System/Lock.hpp>
 #include <SFML/System/Mutex.hpp>
@@ -181,6 +183,141 @@ void injectHostedEvent(const Event& event)
     // forwardEvent is a public static on WindowImplAndroid and already
     // performs the GainedFocus/LostFocus housekeeping plus pushEvent.
     priv::WindowImplAndroid::forwardEvent(event);
+}
+
+
+////////////////////////////////////////////////////////////
+// Hosted input injection: assemble sf::Event from raw Android fields,
+// reusing the same translation tables WindowImplAndroid uses for the
+// NativeActivity path. See header for the public contract.
+////////////////////////////////////////////////////////////
+
+namespace
+{
+    // Mirror of WindowImplAndroid::processKeyEvent's modifier extraction.
+    // AMETA_* bits are stable across all NDK versions we target. The
+    // `control` field is left false to match what the NativeActivity path
+    // does — Android does not expose a CTRL modifier independent of the
+    // virtual-meta layer, and SFML's NativeActivity flow simply doesn't
+    // populate it.
+    void fillKeyEvent(Event& event, int androidKeyCode, int metaState)
+    {
+        event.key.code    = priv::WindowImplAndroid::androidKeyToSF(androidKeyCode);
+        event.key.alt     = (metaState & AMETA_ALT_ON)   != 0;
+        event.key.control = false;
+        event.key.shift   = (metaState & AMETA_SHIFT_ON) != 0;
+    }
+}
+
+
+////////////////////////////////////////////////////////////
+void injectHostedKeyDown(int androidKeyCode, int metaState, int repeatCount)
+{
+    // Drop OS-level auto-repeat: consumers like PSDK run their own time-
+    // based repeat handler and would otherwise double-count state changes.
+    // The initial press is repeatCount == 0; held-key repeats are > 0.
+    if (repeatCount > 0)
+        return;
+
+    Event event;
+    event.type = Event::KeyPressed;
+    fillKeyEvent(event, androidKeyCode, metaState);
+    injectHostedEvent(event);
+}
+
+
+////////////////////////////////////////////////////////////
+void injectHostedKeyUp(int androidKeyCode, int metaState)
+{
+    Event event;
+    event.type = Event::KeyReleased;
+    fillKeyEvent(event, androidKeyCode, metaState);
+    injectHostedEvent(event);
+}
+
+
+////////////////////////////////////////////////////////////
+void injectHostedText(unsigned int unicodeCodepoint)
+{
+    // Mirrors the NativeActivity path which silently drops 0 codepoints
+    // — those happen for non-printable keys whose KeyEvent.getUnicodeChar
+    // returns 0.
+    if (unicodeCodepoint == 0)
+        return;
+
+    Event event;
+    event.type         = Event::TextEntered;
+    event.text.unicode = static_cast<Uint32>(unicodeCodepoint);
+    injectHostedEvent(event);
+}
+
+
+////////////////////////////////////////////////////////////
+void injectHostedJoystickButton(int deviceId, int androidKeyCode, bool pressed)
+{
+    // Reuse WindowImplAndroid's gamepad-button table. Unrecognised keycodes
+    // map to Joystick::ButtonCount and are dropped, matching what
+    // processJoystickKeyEvent does.
+    unsigned int index = priv::WindowImplAndroid::androidJoystickKeyToIndex(androidKeyCode);
+    if (index >= Joystick::ButtonCount)
+        return;
+
+    priv::JoystickImpl::pushEvent(priv::JoystickEvent {
+        deviceId,
+        priv::JoystickEventType::Key,
+        index,
+        pressed
+    });
+}
+
+
+////////////////////////////////////////////////////////////
+void injectHostedJoystickAxis(int   deviceId,
+                              float axisX,    float axisY,
+                              float axisZ,    float axisRz,
+                              float hatX,     float hatY,
+                              float lTrigger, float rTrigger)
+{
+    // Axes pass through at [-1, 1]; JoystickImpl::update scales by 100
+    // before storing into the polled state used by WindowImpl's joystick
+    // event generator. Y-axes match the convention in processJoystickMotionEvent
+    // (no inversion); caller is responsible for the Y-hat sign-flip if it
+    // wants WindowImplAndroid-compatible behaviour.
+    priv::JoystickImpl::pushEvent(priv::JoystickEvent {
+        deviceId,
+        priv::JoystickEventType::Motion,
+        Joystick::ButtonCount,
+        false,
+        priv::JoystickMotionData {
+            hatX, hatY,
+            lTrigger, rTrigger,
+            axisX, axisY, axisZ, axisRz
+        }
+    });
+}
+
+
+////////////////////////////////////////////////////////////
+void injectHostedJoystickConnected(int deviceId)
+{
+    priv::JoystickImpl::pushEvent(priv::JoystickEvent {
+        deviceId,
+        priv::JoystickEventType::Connection,
+        Joystick::ButtonCount,
+        true  // `pressed` doubles as `connected` for Connection events
+    });
+}
+
+
+////////////////////////////////////////////////////////////
+void injectHostedJoystickDisconnected(int deviceId)
+{
+    priv::JoystickImpl::pushEvent(priv::JoystickEvent {
+        deviceId,
+        priv::JoystickEventType::Connection,
+        Joystick::ButtonCount,
+        false
+    });
 }
 
 } // namespace android

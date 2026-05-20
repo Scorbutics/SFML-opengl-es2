@@ -188,6 +188,24 @@ public:
     static void forwardEvent(const Event& event);
     static WindowImplAndroid* singleInstance;
 
+    ////////////////////////////////////////////////////////////
+    /// \brief Convert an Android key code to the equivalent SFML key
+    ///
+    /// Public so the hosted-Activity bridge (HostedAndroidWindow.cpp) can
+    /// reuse the same translation table the NativeActivity input pump uses,
+    /// rather than duplicating it.
+    ///
+    ////////////////////////////////////////////////////////////
+    static Keyboard::Key androidKeyToSF(int32_t key);
+
+    ////////////////////////////////////////////////////////////
+    /// \brief Convert an Android gamepad button code to a SFML joystick index
+    ///
+    /// Public for the same reason as androidKeyToSF.
+    ///
+    ////////////////////////////////////////////////////////////
+    static unsigned int androidJoystickKeyToIndex(int32_t key);
+
 protected:
 
     ////////////////////////////////////////////////////////////
@@ -216,26 +234,6 @@ private:
     static int processPointerEvent(bool isDown, AInputEvent* event, ActivityStates& states);
     static int processJoystickKeyEvent(AInputEvent* _event, ActivityStates& states);
     static int processJoystickMotionEvent(AInputEvent* _event, ActivityStates& states);
-
-    ////////////////////////////////////////////////////////////
-    /// \brief Convert a Android key to SFML key code
-    ///
-    /// \param symbol Android key to convert
-    ///
-    /// \return Corresponding SFML key code
-    ///
-    ////////////////////////////////////////////////////////////
-    static Keyboard::Key androidKeyToSF(int32_t key);
-
-    ////////////////////////////////////////////////////////////
-    /// \brief Convert a Android joystick key to SFML joystick button index
-    ///
-    /// \param symbol Android key to convert
-    ///
-    /// \return Corresponding SFML joystick button index
-    ///
-    ////////////////////////////////////////////////////////////
-    static unsigned int androidJoystickKeyToIndex(int32_t key);
 
     ////////////////////////////////////////////////////////////
     /// \brief Get Unicode decoded from the input event

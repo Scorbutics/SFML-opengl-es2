@@ -98,6 +98,74 @@ SFML_WINDOW_API void injectHostedEvent(const Event& event);
 ////////////////////////////////////////////////////////////
 SFML_WINDOW_API void clearHostedSurfaceWindow();
 
+
+////////////////////////////////////////////////////////////
+// Hosted input injection
+//
+// These mirror what WindowImplAndroid::processKeyEvent and
+// processJoystick*Event do for the NativeActivity flow, but take
+// raw Android event fields (keycodes, metaState, axis values) so the
+// hosting Activity can drive them straight from dispatchKeyEvent /
+// dispatchGenericMotionEvent without needing to assemble sf::Event by hand.
+// Translation from Android keycodes to sf::Keyboard / joystick indices
+// reuses WindowImplAndroid's existing tables.
+////////////////////////////////////////////////////////////
+
+////////////////////////////////////////////////////////////
+/// \brief Inject a hardware key press.
+///
+/// repeatCount > 0 is silently dropped: Android's OS-level auto-repeat
+/// would otherwise produce duplicate state updates in consumers that
+/// run their own software repeat handler (e.g. PSDK's Input module).
+///
+////////////////////////////////////////////////////////////
+SFML_WINDOW_API void injectHostedKeyDown(int androidKeyCode, int metaState, int repeatCount);
+
+////////////////////////////////////////////////////////////
+/// \brief Inject a hardware key release.
+////////////////////////////////////////////////////////////
+SFML_WINDOW_API void injectHostedKeyUp(int androidKeyCode, int metaState);
+
+////////////////////////////////////////////////////////////
+/// \brief Inject a TextEntered event for a single Unicode codepoint.
+///
+/// Codepoint of 0 is silently dropped. Use for both hardware-key text
+/// (computed by the host via KeyEvent.getUnicodeChar(metaState)) and
+/// soft-keyboard input from a hidden EditText TextWatcher.
+///
+////////////////////////////////////////////////////////////
+SFML_WINDOW_API void injectHostedText(unsigned int unicodeCodepoint);
+
+////////////////////////////////////////////////////////////
+/// \brief Inject a gamepad button down/up event.
+///
+/// androidKeyCode must be one of the AKEYCODE_BUTTON_* / AKEYCODE_DPAD_*
+/// values that androidJoystickKeyToIndex recognises. Other keycodes are
+/// silently dropped.
+///
+////////////////////////////////////////////////////////////
+SFML_WINDOW_API void injectHostedJoystickButton(int deviceId, int androidKeyCode, bool pressed);
+
+////////////////////////////////////////////////////////////
+/// \brief Inject gamepad analog-axis state.
+///
+/// Axis values are in [-1, 1] as returned by AMotionEvent_getAxisValue.
+/// They are scaled to SFML's [-100, 100] range internally to match what
+/// WindowImplAndroid::processJoystickMotionEvent feeds into JoystickImpl.
+///
+////////////////////////////////////////////////////////////
+SFML_WINDOW_API void injectHostedJoystickAxis(int   deviceId,
+                                              float axisX,    float axisY,
+                                              float axisZ,    float axisRz,
+                                              float hatX,     float hatY,
+                                              float lTrigger, float rTrigger);
+
+////////////////////////////////////////////////////////////
+/// \brief Inject a gamepad connect / disconnect event.
+////////////////////////////////////////////////////////////
+SFML_WINDOW_API void injectHostedJoystickConnected(int deviceId);
+SFML_WINDOW_API void injectHostedJoystickDisconnected(int deviceId);
+
 } // namespace android
 } // namespace sf
 

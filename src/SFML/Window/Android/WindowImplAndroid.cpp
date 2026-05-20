@@ -182,6 +182,27 @@ WindowHandle WindowImplAndroid::getSystemHandle() const
 ////////////////////////////////////////////////////////////
 void WindowImplAndroid::processEvents()
 {
+    // Hosted-Activity flow: when a process-shared sf::RenderWindow
+    // is reused across multiple PsdkInterpreter sessions, the
+    // preserved WindowImplAndroid keeps a reference to the ALooper
+    // of whichever thread first constructed it (typically the first
+    // interpreter's render thread, now dead). The current thread
+    // (whatever new render thread is now driving this WindowImpl)
+    // has no looper of its own, and ALooper_pollAll then spams
+    // "No looper for this thread!" on every frame.
+    //
+    // Lazily prepare one. ALooper_forThread returns NULL when no
+    // looper exists for the current thread; ALooper_prepare creates
+    // one in that case and is a no-op when one already exists.
+    // We don't need to store/acquire it — the looper lives for the
+    // duration of the thread, and we don't use AInputQueue events
+    // in the hosted flow (NativeSurface.inject* delivers them
+    // straight to the SFML event queue).
+    if (ALooper_forThread() == NULL)
+    {
+        ALooper_prepare(ALOOPER_PREPARE_ALLOW_NON_CALLBACKS);
+    }
+
     // Process incoming OS events
     ALooper_pollAll(0, NULL, NULL, NULL);
 
@@ -324,28 +345,11 @@ void WindowImplAndroid::forwardEvent(const Event& event)
             WindowImplAndroid::singleInstance->m_size.x = static_cast<unsigned int>(ANativeWindow_getWidth(states.window));
             WindowImplAndroid::singleInstance->m_size.y = static_cast<unsigned int>(ANativeWindow_getHeight(states.window));
             WindowImplAndroid::singleInstance->m_windowBeingCreated = true;
-            // Cancel any pending destroy: if a prior LostFocus left
-            // m_windowBeingDestroyed=true and processEvents never ran to
-            // honour it (e.g. the thread that owned that focus cycle has
-            // since died — the hosted-Activity flow with a process-shared
-            // sf::RenderWindow does this on every splash→game handoff),
-            // then processEvents would run the create FIRST, then the
-            // destroy, immediately wiping the freshly-created EGL surface
-            // and leaving m_surface = EGL_NO_SURFACE. Subsequent
-            // setActive(true) loops on "Failed to activate the window's
-            // context". GainedFocus is the latest signal — the destroy is
-            // moot, so drop the flag.
-            WindowImplAndroid::singleInstance->m_windowBeingDestroyed = false;
             WindowImplAndroid::singleInstance->m_hasFocus = true;
         }
         else if (event.type == Event::LostFocus)
         {
             WindowImplAndroid::singleInstance->m_windowBeingDestroyed = true;
-            // Symmetric to the GainedFocus case above: cancel any pending
-            // create. Without this, a subsequent processEvents would
-            // create an EGL surface against a soon-to-be-stale window
-            // and then immediately destroy it on the same pump.
-            WindowImplAndroid::singleInstance->m_windowBeingCreated = false;
             WindowImplAndroid::singleInstance->m_hasFocus = false;
         }
 

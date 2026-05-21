@@ -542,11 +542,13 @@ JNIEXPORT void ANativeActivity_onCreate(ANativeActivity* activity, void* savedSt
     states = new sf::priv::ActivityStates;
 
     // Initialize the states value
-    states->activity   = NULL;
-    states->window     = NULL;
-    states->looper     = NULL;
-    states->inputQueue = NULL;
-    states->config     = NULL;
+    states->activity     = NULL;
+    states->window       = NULL;
+    states->hostJvm      = NULL;
+    states->hostActivity = NULL;
+    states->looper       = NULL;
+    states->inputQueue   = NULL;
+    states->config       = NULL;
 
     for (unsigned int i = 0; i < sf::Mouse::ButtonCount; i++)
         states->isButtonPressed[i] = false;

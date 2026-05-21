@@ -75,25 +75,59 @@ void InputImpl::setVirtualKeyboardVisible(bool visible)
     ActivityStates& states = getActivity();
     Lock lock(states.mutex);
 
-    // Initializes JNI
+    // Pick the JNI context: prefer the NativeActivity-provided one when
+    // present, otherwise fall back to the hosted-mode context populated by
+    // sf::android::setHostedJniContext. Without either, this is a no-op
+    // rather than a NULL deref.
+    JavaVM* lJavaVM      = NULL;
+    jobject lActivityObj = NULL;
+    if (states.activity != NULL)
+    {
+        lJavaVM      = states.activity->vm;
+        lActivityObj = states.activity->clazz;
+    }
+    else if (states.hostJvm != NULL && states.hostActivity != NULL)
+    {
+        lJavaVM      = states.hostJvm;
+        lActivityObj = states.hostActivity;
+    }
+    else
+    {
+        err() << "setVirtualKeyboardVisible: no JNI context (no NativeActivity, and "
+                 "sf::android::setHostedJniContext was not called)" << std::endl;
+        return;
+    }
+
+    // Attach the calling thread if it isn't already. We must only detach the
+    // ones we attached ourselves — if the caller is on a thread that the JVM
+    // already knows about (e.g. a Ruby worker that has JNI-attached for other
+    // reasons), DetachCurrentThread would yank that attachment out from
+    // under it.
+    JNIEnv* lJNIEnv  = NULL;
+    bool    attached = false;
+    const jint getStatus = lJavaVM->GetEnv(reinterpret_cast<void**>(&lJNIEnv), JNI_VERSION_1_6);
+    if (getStatus == JNI_EDETACHED)
+    {
+        JavaVMAttachArgs lJavaVMAttachArgs;
+        lJavaVMAttachArgs.version = JNI_VERSION_1_6;
+        lJavaVMAttachArgs.name    = "SFML-VirtualKeyboard";
+        lJavaVMAttachArgs.group   = NULL;
+        if (lJavaVM->AttachCurrentThread(&lJNIEnv, &lJavaVMAttachArgs) != JNI_OK)
+        {
+            err() << "Failed to attach JNI thread; can't switch the keyboard visibility" << std::endl;
+            return;
+        }
+        attached = true;
+    }
+    else if (getStatus != JNI_OK)
+    {
+        err() << "Failed to get JNIEnv; can't switch the keyboard visibility" << std::endl;
+        return;
+    }
+
     jint lFlags = 0;
 
-    JavaVM* lJavaVM = states.activity->vm;
-    JNIEnv* lJNIEnv = states.activity->env;
-
-    JavaVMAttachArgs lJavaVMAttachArgs;
-    lJavaVMAttachArgs.version = JNI_VERSION_1_6;
-    lJavaVMAttachArgs.name = "NativeThread";
-    lJavaVMAttachArgs.group = NULL;
-
-    jint lResult = lJavaVM->AttachCurrentThread(&lJNIEnv, &lJavaVMAttachArgs);
-
-    if (lResult == JNI_ERR)
-        err() << "Failed to initialize JNI, couldn't switch the keyboard visibility" << std::endl;
-
-    // Retrieves NativeActivity
-    jobject lNativeActivity = states.activity->clazz;
-    jclass ClassNativeActivity = lJNIEnv->GetObjectClass(lNativeActivity);
+    jclass ClassActivity = lJNIEnv->GetObjectClass(lActivityObj);
 
     // Retrieves Context.INPUT_METHOD_SERVICE
     jclass ClassContext = lJNIEnv->FindClass("android/content/Context");
@@ -106,16 +140,16 @@ void InputImpl::setVirtualKeyboardVisible(bool visible)
     // Runs getSystemService(Context.INPUT_METHOD_SERVICE)
     jclass ClassInputMethodManager =
         lJNIEnv->FindClass("android/view/inputmethod/InputMethodManager");
-    jmethodID MethodGetSystemService = lJNIEnv->GetMethodID(ClassNativeActivity,
+    jmethodID MethodGetSystemService = lJNIEnv->GetMethodID(ClassActivity,
         "getSystemService", "(Ljava/lang/String;)Ljava/lang/Object;");
-    jobject lInputMethodManager = lJNIEnv->CallObjectMethod(lNativeActivity,
+    jobject lInputMethodManager = lJNIEnv->CallObjectMethod(lActivityObj,
         MethodGetSystemService, INPUT_METHOD_SERVICE);
     lJNIEnv->DeleteLocalRef(INPUT_METHOD_SERVICE);
 
     // Runs getWindow().getDecorView()
-    jmethodID MethodGetWindow = lJNIEnv->GetMethodID(ClassNativeActivity,
+    jmethodID MethodGetWindow = lJNIEnv->GetMethodID(ClassActivity,
         "getWindow", "()Landroid/view/Window;");
-    jobject lWindow = lJNIEnv->CallObjectMethod(lNativeActivity, MethodGetWindow);
+    jobject lWindow = lJNIEnv->CallObjectMethod(lActivityObj, MethodGetWindow);
     jclass ClassWindow = lJNIEnv->FindClass("android/view/Window");
     jmethodID MethodGetDecorView = lJNIEnv->GetMethodID(ClassWindow,
         "getDecorView", "()Landroid/view/View;");
@@ -148,12 +182,12 @@ void InputImpl::setVirtualKeyboardVisible(bool visible)
             MethodHideSoftInput, lBinder, lFlags);
         lJNIEnv->DeleteLocalRef(lBinder);
     }
-    lJNIEnv->DeleteLocalRef(ClassNativeActivity);
+    lJNIEnv->DeleteLocalRef(ClassActivity);
     lJNIEnv->DeleteLocalRef(ClassInputMethodManager);
     lJNIEnv->DeleteLocalRef(lDecorView);
 
-    // Finished with the JVM
-    lJavaVM->DetachCurrentThread();
+    if (attached)
+        lJavaVM->DetachCurrentThread();
 }
 
 ////////////////////////////////////////////////////////////

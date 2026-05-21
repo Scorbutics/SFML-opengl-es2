@@ -31,6 +31,8 @@
 #include <SFML/Window/Export.hpp>
 #include <SFML/Window/Event.hpp>
 
+#include <jni.h>
+
 namespace sf
 {
 namespace android
@@ -97,6 +99,34 @@ SFML_WINDOW_API void injectHostedEvent(const Event& event);
 ///
 ////////////////////////////////////////////////////////////
 SFML_WINDOW_API void clearHostedSurfaceWindow();
+
+////////////////////////////////////////////////////////////
+/// \brief Provide a JNI context for the hosted Activity.
+///
+/// SFML features that perform JNI calls on Android (currently virtual
+/// keyboard show/hide) read the JavaVM and the host Activity from
+/// ANativeActivity in the NativeActivity flow. In hosted mode there is no
+/// ANativeActivity, so the embedder must supply both explicitly via this
+/// call. Without it, sf::Keyboard::setVirtualKeyboardVisible is a no-op
+/// (logs a warning instead of crashing).
+///
+/// Must be called after prepareHostedActivity. May be called again with
+/// updated values (the previous JNI global ref is released). Passing
+/// (NULL, NULL) clears the context.
+///
+/// The Activity reference is promoted to a JNI global ref internally, so
+/// the caller may pass either a local or a global ref. The thread that
+/// makes this call must be JNI-attached. Lifetime tracks the Activity:
+/// release on Activity.onDestroy via releaseHostedActivity (or clear it
+/// explicitly with setHostedJniContext(vm, NULL) on configuration change).
+///
+/// \param vm        Process-wide JavaVM*, typically cached in JNI_OnLoad.
+/// \param activity  Android Activity jobject (or any Context that owns a
+///                  Window — getSystemService("input_method") and
+///                  getWindow().getDecorView() are invoked on it).
+///
+////////////////////////////////////////////////////////////
+SFML_WINDOW_API void setHostedJniContext(JavaVM* vm, jobject activity);
 
 
 ////////////////////////////////////////////////////////////

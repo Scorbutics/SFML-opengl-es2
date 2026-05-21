@@ -58,6 +58,15 @@ struct ActivityStates
     ANativeActivity* activity;
     ANativeWindow* window;
 
+    // Hosted-mode JNI context. Populated by sf::android::setHostedJniContext
+    // when SFML is embedded inside a regular Android Activity (no
+    // NativeActivity). Both stay NULL in the NativeActivity flow; readers
+    // that need JNI access (e.g. virtual keyboard) must fall back to these
+    // when `activity` is NULL. `hostActivity` is a JNI global ref, owned by
+    // the ActivityStates (released in setHostedJniContext / releaseHostedActivity).
+    JavaVM* hostJvm;
+    jobject hostActivity;
+
     ALooper*        looper;
     AInputQueue*    inputQueue;
     AConfiguration* config;

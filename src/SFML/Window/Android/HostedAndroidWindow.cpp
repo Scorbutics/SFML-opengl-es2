@@ -55,6 +55,54 @@ namespace
     // hosted mode. The NativeActivity path heap-allocates this in
     // ANativeActivity_onCreate; we mirror that ownership model here.
     sf::priv::ActivityStates* g_hostedStates = NULL;
+
+    // Acquire a JNIEnv* for the current thread, attaching if needed.
+    // Sets *outAttached to true iff we did the attach (so the caller knows
+    // whether to DetachCurrentThread afterwards). Returns NULL on failure.
+    JNIEnv* acquireEnv(JavaVM* vm, bool* outAttached)
+    {
+        *outAttached = false;
+        if (vm == NULL) return NULL;
+
+        JNIEnv* env = NULL;
+        const jint getStatus = vm->GetEnv(reinterpret_cast<void**>(&env), JNI_VERSION_1_6);
+        if (getStatus == JNI_OK) return env;
+
+        if (getStatus == JNI_EDETACHED)
+        {
+            JavaVMAttachArgs args;
+            args.version = JNI_VERSION_1_6;
+            args.name    = "SFML-Hosted";
+            args.group   = NULL;
+            if (vm->AttachCurrentThread(&env, &args) == JNI_OK)
+            {
+                *outAttached = true;
+                return env;
+            }
+        }
+        return NULL;
+    }
+
+    // Drop the cached host Activity global ref. Safe to call when
+    // hostJvm/hostActivity are already NULL. Must be called with the
+    // states->mutex held by the caller.
+    void releaseHostActivityRef(sf::priv::ActivityStates* states)
+    {
+        if (states->hostActivity == NULL || states->hostJvm == NULL)
+        {
+            states->hostActivity = NULL;
+            return;
+        }
+
+        bool attached = false;
+        JNIEnv* env = acquireEnv(states->hostJvm, &attached);
+        if (env != NULL)
+            env->DeleteGlobalRef(states->hostActivity);
+        if (attached)
+            states->hostJvm->DetachCurrentThread();
+
+        states->hostActivity = NULL;
+    }
 }
 
 namespace sf
@@ -87,6 +135,8 @@ void prepareHostedActivity(void* nativeWindow, int width, int height)
     states->inputQueue     = NULL;
     states->config         = NULL;
     states->context        = NULL; // populated by EglContext ctor on first RenderWindow
+    states->hostJvm        = NULL;
+    states->hostActivity   = NULL;
     states->savedState     = NULL;
     states->savedStateSize = 0;
     states->forwardEvent   = NULL;
@@ -137,6 +187,13 @@ void releaseHostedActivity()
     if (g_hostedStates == NULL)
         return;
 
+    // Drop the cached Activity JNI global ref before tearing down.
+    {
+        Lock lock(g_hostedStates->mutex);
+        releaseHostActivityRef(g_hostedStates);
+        g_hostedStates->hostJvm = NULL;
+    }
+
     // Terminate EGL. The caller is responsible for releasing the
     // ANativeWindow* afterwards.
     if (g_hostedStates->display != EGL_NO_DISPLAY)
@@ -146,6 +203,43 @@ void releaseHostedActivity()
 
     delete g_hostedStates;
     g_hostedStates = NULL;
+}
+
+////////////////////////////////////////////////////////////
+void setHostedJniContext(JavaVM* vm, jobject activity)
+{
+    if (g_hostedStates == NULL)
+    {
+        err() << "setHostedJniContext called before prepareHostedActivity; ignoring" << std::endl;
+        return;
+    }
+
+    Lock lock(g_hostedStates->mutex);
+
+    // Drop any previously cached ref before replacing — both for the
+    // (NULL, NULL) clear case and for re-registration on configuration change.
+    releaseHostActivityRef(g_hostedStates);
+    g_hostedStates->hostJvm = vm;
+
+    if (vm == NULL || activity == NULL)
+        return;
+
+    bool attached = false;
+    JNIEnv* env = acquireEnv(vm, &attached);
+    if (env != NULL)
+    {
+        // NewGlobalRef accepts local OR global refs and always returns a fresh
+        // global ref. So callers don't need to know which kind they're passing.
+        g_hostedStates->hostActivity = env->NewGlobalRef(activity);
+        if (g_hostedStates->hostActivity == NULL)
+            err() << "setHostedJniContext: NewGlobalRef returned NULL (out of refs?)" << std::endl;
+    }
+    else
+    {
+        err() << "setHostedJniContext: couldn't acquire JNIEnv on calling thread" << std::endl;
+    }
+    if (attached)
+        vm->DetachCurrentThread();
 }
 
 ////////////////////////////////////////////////////////////

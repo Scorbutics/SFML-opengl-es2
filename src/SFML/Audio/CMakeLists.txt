@@ -85,6 +85,9 @@ sfml_add_library(sfml-audio
 
 # setup dependencies
 target_link_libraries(sfml-audio PRIVATE OpenAL)
+if(SFML_OS_SWITCH)
+    target_link_libraries(sfml-audio PRIVATE SDL2::SDL2)
+endif()
 
 # minimp3 sources
 target_include_directories(sfml-audio SYSTEM PRIVATE "${PROJECT_SOURCE_DIR}/extlibs/headers/minimp3")

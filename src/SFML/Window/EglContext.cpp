@@ -56,6 +56,29 @@ namespace
     // A nested named namespace is used here to allow unity builds of SFML.
     namespace EglContextImpl
     {
+#if defined(SFML_SYSTEM_SWITCH)
+        // The EGL display is a process-wide singleton shared by every EglContext.
+        // On Switch it owns the default nwindow framebuffer, so it MUST be
+        // terminated exactly once -- but only after the LAST context is gone.
+        sf::Mutex& displayMutex()
+        {
+            static sf::Mutex m;
+            return m;
+        }
+        EGLDisplay g_display       = EGL_NO_DISPLAY;
+        unsigned int g_displayRefs = 0;
+    
+        void releaseDisplay()  // call once per context (release)
+        {
+            sf::Lock lock(displayMutex());
+            assert(g_displayRefs > 0);
+            if (--g_displayRefs == 0) {
+                eglCheck(eglTerminate(g_display));  // hands framebuffer back to OS
+                g_display = EGL_NO_DISPLAY;         // allow clean re-init later
+            }
+        }
+#endif
+
         EGLDisplay getInitializedDisplay()
         {
 #if defined(SFML_SYSTEM_ANDROID)
@@ -66,17 +89,28 @@ namespace
 
             return states.display;
 
-#endif
+#elif defined(SFML_SYSTEM_SWITCH)
 
+            sf::Lock lock(displayMutex());
+            if (g_display == EGL_NO_DISPLAY)
+            {
+                eglCheck(g_display = eglGetDisplay(EGL_DEFAULT_DISPLAY));
+                eglCheck(eglInitialize(g_display, NULL, NULL));
+            }
+            ++g_displayRefs;
+            return g_display;
+
+#else
             static EGLDisplay display = EGL_NO_DISPLAY;
-
+            
             if (display == EGL_NO_DISPLAY)
             {
                 eglCheck(display = eglGetDisplay(EGL_DEFAULT_DISPLAY));
                 eglCheck(eglInitialize(display, NULL, NULL));
             }
-
+            
             return display;
+#endif
         }
 
 
@@ -303,7 +337,7 @@ EglContext::~EglContext()
 #elif defined(SFML_SYSTEM_SWITCH)
     if (m_display)
     {
-        eglTerminate(m_display);
+        EglContextImpl::releaseDisplay();
         m_display = NULL;
     }
 #endif

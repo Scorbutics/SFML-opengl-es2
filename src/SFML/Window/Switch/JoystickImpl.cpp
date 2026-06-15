@@ -34,18 +34,18 @@ static HidNpadButton KEYS_BY_INDEX[] = {
     HidNpadButton_B,
     HidNpadButton_X,
     HidNpadButton_Y,
-    HidNpadButton_StickL,
-    HidNpadButton_StickR,
     HidNpadButton_L,
     HidNpadButton_R,
     HidNpadButton_ZL,
     HidNpadButton_ZR,
+    HidNpadButton_StickL,
+    HidNpadButton_StickR,
     HidNpadButton_Plus,
     HidNpadButton_Minus,
-    HidNpadButton_Left,
     HidNpadButton_Up,
-    HidNpadButton_Right,
     HidNpadButton_Down,
+    HidNpadButton_Left,
+    HidNpadButton_Right,
     HidNpadButton_StickLLeft,
     HidNpadButton_StickLUp,
     HidNpadButton_StickLRight,
@@ -133,6 +133,8 @@ JoystickCaps JoystickImpl::getCapabilities() const
     caps.buttonCount = NUM_KEYS_BY_INDEX;
     caps.axes[Joystick::X] = true;
     caps.axes[Joystick::Y] = true;
+    caps.axes[Joystick::U] = true;
+    caps.axes[Joystick::V] = true;
     return caps;
 }
 
@@ -152,7 +154,7 @@ JoystickState JoystickImpl::update()
 {
     padUpdate(&m_state);
     auto sfmlState = JoystickState();
-    u64 keys = padGetButtonsDown(&m_state);
+    u64 keys = padGetButtons(&m_state);
 
     sfmlState.connected = padIsConnected(&m_state);
     for (int i = 0; i < NUM_KEYS_BY_INDEX; i++)
@@ -163,9 +165,9 @@ JoystickState JoystickImpl::update()
     // SFML's contract is that JoystickMoved::position is a float in −100..+100
     constexpr auto SCALING_FACTOR = 32767.F / 100.F;
     sfmlState.axes[Joystick::X]   = static_cast<float>(left.x) / SCALING_FACTOR;
-    sfmlState.axes[Joystick::Y]   = static_cast<float>(left.y) / SCALING_FACTOR;
+    sfmlState.axes[Joystick::Y]   = -static_cast<float>(left.y) / SCALING_FACTOR;
     sfmlState.axes[Joystick::U]   = static_cast<float>(right.x) / SCALING_FACTOR;
-    sfmlState.axes[Joystick::V]   = static_cast<float>(right.y) / SCALING_FACTOR;
+    sfmlState.axes[Joystick::V]   = -static_cast<float>(right.y) / SCALING_FACTOR;
     // To implement
     return sfmlState;
 }

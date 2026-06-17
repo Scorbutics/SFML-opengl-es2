@@ -91,6 +91,23 @@ public:
     static void setVirtualKeyboardVisible(bool visible);
 
     ////////////////////////////////////////////////////////////
+    /// \brief Set the initial text to use when showing the virtual keyboard
+    ///
+    /// \warning This function is not thread-safe and must be called
+    ///          synchronously before calling setVirtualKeyboardVisible(true).
+    ///
+    /// \param text Initial text to display in the virtual keyboard
+    ///
+    ////////////////////////////////////////////////////////////
+    static void setVirtualKeyboardInitState(String text);
+
+    ////////////////////////////////////////////////////////////
+    /// \brief Process virtual keyboard events
+    ///
+    ////////////////////////////////////////////////////////////
+    static void processVirtualKeyboardEvents();
+
+    ////////////////////////////////////////////////////////////
     /// \brief Check if a mouse button is pressed
     ///
     /// \param button Button to check

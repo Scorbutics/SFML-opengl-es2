@@ -28,6 +28,7 @@
 ////////////////////////////////////////////////////////////
 #include <SFML/Window/WindowStyle.hpp> // important to be included first (conflict with None)
 #include <SFML/Window/Switch/WindowImplSwitch.hpp>
+#include <SFML/Window/Switch/InputImpl.hpp>
 #include <SFML/Window/Event.hpp>
 #include <SFML/System/Lock.hpp>
 #include <SFML/System/Err.hpp>
@@ -86,6 +87,7 @@ void WindowImplSwitch::processEvents()
 {
     appletMainLoop();
     processTouchscreenEvent();
+    InputImpl::processVirtualKeyboardEvents();
 }
 
 
@@ -202,8 +204,8 @@ void WindowImplSwitch::processTouchscreenEvent()
                         Event evt;
                         evt.type = Event::TouchMoved;
                         evt.touch.finger = state.touches[i].finger_id;
-                        evt.touch.x = state.touches[i].x;
-                        evt.touch.y = state.touches[i].y;
+                        evt.touch.x = static_cast<int>(state.touches[i].x);
+                        evt.touch.y = static_cast<int>(state.touches[i].y);
                         forwardEvent(evt);
                     }
                 }
@@ -212,8 +214,8 @@ void WindowImplSwitch::processTouchscreenEvent()
                 Event evt;
                 evt.type = Event::TouchBegan;
                 evt.touch.finger = state.touches[i].finger_id;
-                evt.touch.x = state.touches[i].x;
-                evt.touch.y = state.touches[i].y;
+                evt.touch.x = static_cast<int>(state.touches[i].x);
+                evt.touch.y = static_cast<int>(state.touches[i].y);
                 forwardEvent(evt);
             }
         }
@@ -228,8 +230,8 @@ void WindowImplSwitch::processTouchscreenEvent()
                 Event evt;
                 evt.type = Event::TouchEnded;
                 evt.touch.finger = previous_state.touches[i].finger_id;
-                evt.touch.x = previous_state.touches[i].x;
-                evt.touch.y = previous_state.touches[i].y;
+                evt.touch.x = static_cast<int>(previous_state.touches[i].x);
+                evt.touch.y = static_cast<int>(previous_state.touches[i].y);
                 forwardEvent(evt);
             }
         }

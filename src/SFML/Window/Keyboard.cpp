@@ -68,4 +68,12 @@ void Keyboard::setVirtualKeyboardVisible(bool visible)
     priv::InputImpl::setVirtualKeyboardVisible(visible);
 }
 
+////////////////////////////////////////////////////////////
+#if defined(SFML_SYSTEM_SWITCH)
+void Keyboard::setVirtualKeyboardInitState(String text)
+{
+    priv::InputImpl::setVirtualKeyboardInitState(text);
+}
+#endif
+
 } // namespace sf

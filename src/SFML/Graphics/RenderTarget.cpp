@@ -797,7 +797,9 @@ void RenderTarget::setupDraw(bool useVertexCache, const RenderStates& states)
             glCheck(glLoadIdentity());
         }
 #else
-        usedShader->setUniform("sf_modelview", static_cast<Glsl::Mat4>(Transform::Identity.getMatrix()));
+        if (!m_cache.enable || !m_cache.useVertexCache || m_cache.programChanged != usedShader->getNativeHandle()) {
+          usedShader->setUniform("sf_modelview", static_cast<Glsl::Mat4>(Transform::Identity.getMatrix()));
+        }
 #endif
     }
     else

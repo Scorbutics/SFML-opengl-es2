@@ -823,14 +823,19 @@ void RenderTarget::setupDraw(bool useVertexCache, const RenderStates& states)
 
 #else
 
-    // Set the viewport
-    IntRect viewport = getViewport(m_view);
-    int top = static_cast<int>(getSize().y) - (viewport.top + viewport.height);
-    glCheck(glViewport(viewport.left, top, viewport.width, viewport.height));
-
+    if (!m_cache.enable || m_cache.viewChanged || m_cache.programChanged != usedShader->getNativeHandle())
     {
-        // Set the projection matrix
-        usedShader->setUniform("sf_projection", static_cast<Glsl::Mat4>(m_view.getTransform().getMatrix()));
+      // Set the viewport
+      IntRect viewport = getViewport(m_view);
+      int top = static_cast<int>(getSize().y) - (viewport.top + viewport.height);
+      glCheck(glViewport(viewport.left, top, viewport.width, viewport.height));
+
+      {
+          // Set the projection matrix
+          usedShader->setUniform("sf_projection", static_cast<Glsl::Mat4>(m_view.getTransform().getMatrix()));
+      }
+
+      m_cache.viewChanged = false;
     }
 
 #endif

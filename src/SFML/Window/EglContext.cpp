@@ -340,9 +340,16 @@ void EglContext::createSurface(EGLNativeWindowType window)
     // by the now-freed ANativeWindow. Releasing it before creating the
     // new one keeps us from leaking the stale EGLSurface and ensures
     // eglMakeCurrent picks the right one on the next setActive.
+    //
+    // Unbind through setActive(false), same as destroySurface(), never a
+    // raw eglMakeCurrent: GlContext tracks the thread's current context
+    // and setActive(true) is a no-op while it still points at us. A raw
+    // unbind left that tracking stale, so the next setActive(true) never
+    // rebound the context and every GL call ran with no current context
+    // (black screen after a detach/attach with no event pump in between).
     if (m_surface != EGL_NO_SURFACE)
     {
-        eglMakeCurrent(m_display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
+        setActive(false);
         eglDestroySurface(m_display, m_surface);
         m_surface = EGL_NO_SURFACE;
     }

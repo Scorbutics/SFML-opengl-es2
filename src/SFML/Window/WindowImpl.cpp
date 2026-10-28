@@ -26,6 +26,7 @@
 // Headers
 ////////////////////////////////////////////////////////////
 #include <SFML/Window/WindowImpl.hpp>
+#include <SFML/System/Lock.hpp>
 #include <SFML/Window/Event.hpp>
 #include <SFML/Window/JoystickManager.hpp>
 #include <SFML/Window/SensorManager.hpp>
@@ -139,7 +140,7 @@ void WindowImpl::setJoystickThreshold(float threshold)
 bool WindowImpl::popEvent(Event& event, bool block)
 {
     // If the event queue is empty, let's first check if new events are available from the OS
-    if (m_events.empty())
+    if (isEventQueueEmpty())
     {
         // Get events from the system
         processJoystickEvents();
@@ -152,7 +153,7 @@ bool WindowImpl::popEvent(Event& event, bool block)
             // Here we use a manual wait loop instead of the optimized
             // wait-event provided by the OS, so that we don't skip joystick
             // events (which require polling)
-            while (m_events.empty())
+            while (isEventQueueEmpty())
             {
                 sleep(milliseconds(10));
                 processJoystickEvents();
@@ -162,7 +163,9 @@ bool WindowImpl::popEvent(Event& event, bool block)
         }
     }
 
-    // Pop the first event of the queue, if it is not empty
+    // Pop the first event of the queue, if it is not empty. The lock is
+    // never held across processEvents(), which may itself push events.
+    Lock lock(m_eventsMutex);
     if (!m_events.empty())
     {
         event = m_events.front();
@@ -178,7 +181,19 @@ bool WindowImpl::popEvent(Event& event, bool block)
 ////////////////////////////////////////////////////////////
 void WindowImpl::pushEvent(const Event& event)
 {
+    // On Android hosted mode, touch/key/focus events are pushed from the UI
+    // thread (via WindowImplAndroid::forwardEvent) while the render thread
+    // pops them: the queue must be locked on both sides.
+    Lock lock(m_eventsMutex);
     m_events.push(event);
+}
+
+
+////////////////////////////////////////////////////////////
+bool WindowImpl::isEventQueueEmpty()
+{
+    Lock lock(m_eventsMutex);
+    return m_events.empty();
 }
 
 

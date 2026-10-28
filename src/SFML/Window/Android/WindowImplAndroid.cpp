@@ -163,9 +163,14 @@ WindowImplAndroid::~WindowImplAndroid()
             ALooper_release(states->looper);
             states->looper = NULL;
         }
+        // Cleared under states.mutex: forwardEvent (UI thread) reads it
+        // under the same lock.
+        WindowImplAndroid::singleInstance = NULL;
     }
-
-    WindowImplAndroid::singleInstance = NULL;
+    else
+    {
+        WindowImplAndroid::singleInstance = NULL;
+    }
 }
 
 
@@ -336,14 +341,29 @@ bool WindowImplAndroid::hasFocus() const
 ////////////////////////////////////////////////////////////
 void WindowImplAndroid::forwardEvent(const Event& event)
 {
+    // Hosted mode calls this from the Android UI thread while the render
+    // thread runs processEvents() (which reads and clears the flags below
+    // under states.mutex) and may destroy the window (which clears
+    // singleInstance under the same lock). Hold states.mutex for the whole
+    // function so singleInstance can't be freed under us and a flag set
+    // here can't be lost to a concurrent clear.
+    ActivityStates* const statesPtr = getActivityStatesPtr();
+    if (statesPtr == NULL)
+        return;
+    ActivityStates& states = *statesPtr;
+    Lock lock(states.mutex);
+
     if (WindowImplAndroid::singleInstance != NULL)
     {
-        ActivityStates& states = getActivity();
-
         if (event.type == Event::GainedFocus)
         {
-            WindowImplAndroid::singleInstance->m_size.x = static_cast<unsigned int>(ANativeWindow_getWidth(states.window));
-            WindowImplAndroid::singleInstance->m_size.y = static_cast<unsigned int>(ANativeWindow_getHeight(states.window));
+            // states.window is NULL while no surface is attached (detach
+            // clears it); keep the last known size rather than crash.
+            if (states.window != NULL)
+            {
+                WindowImplAndroid::singleInstance->m_size.x = static_cast<unsigned int>(ANativeWindow_getWidth(states.window));
+                WindowImplAndroid::singleInstance->m_size.y = static_cast<unsigned int>(ANativeWindow_getHeight(states.window));
+            }
             WindowImplAndroid::singleInstance->m_windowBeingCreated = true;
             // Cancel any still-pending destroy. The hosted-Activity flow
             // can deliver LostFocus immediately followed by GainedFocus

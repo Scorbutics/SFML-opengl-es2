@@ -284,7 +284,11 @@ void EglContext::reloadGladForDisplay(EGLDisplay display)
 ////////////////////////////////////////////////////////////
 bool EglContext::makeCurrent(bool current)
 {
-    if (m_surface == EGL_NO_SURFACE)
+    // Binding needs a surface; releasing does not. Refusing to release
+    // without a surface left the context current on a thread about to exit
+    // (hosted mode tears the surface down asynchronously), and the next
+    // render thread then failed every eglMakeCurrent with EGL_BAD_ACCESS.
+    if (current && m_surface == EGL_NO_SURFACE)
         return false;
 
     EGLBoolean result = EGL_FALSE;

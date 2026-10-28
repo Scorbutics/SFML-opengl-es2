@@ -29,6 +29,7 @@
 // Headers
 ////////////////////////////////////////////////////////////
 #include <SFML/Config.hpp>
+#include <SFML/System/Mutex.hpp>
 #include <SFML/System/NonCopyable.hpp>
 #include <SFML/System/String.hpp>
 #include <SFML/Window/ContextSettings.hpp>
@@ -280,9 +281,16 @@ private:
     void processSensorEvents();
 
     ////////////////////////////////////////////////////////////
+    /// \brief Check whether the event queue is empty (thread-safe)
+    ///
+    ////////////////////////////////////////////////////////////
+    bool isEventQueueEmpty();
+
+    ////////////////////////////////////////////////////////////
     // Member data
     ////////////////////////////////////////////////////////////
     std::queue<Event> m_events;                                              //!< Queue of available events
+    Mutex             m_eventsMutex;                                         //!< Guards m_events: hosted Android pushes from the UI thread while the render thread pops
     JoystickState     m_joystickStates[Joystick::Count];                     //!< Previous state of the joysticks
     Vector3f          m_sensorValue[Sensor::Count];                          //!< Previous value of the sensors
     float             m_joystickThreshold;                                   //!< Joystick threshold (minimum motion for "move" event to be generated)

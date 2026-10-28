@@ -168,6 +168,10 @@ void prepareHostedActivity(void* nativeWindow, int width, int height)
     priv::resetActivity(states);
     g_hostedStates = states;
 
+    // Redirect stderr to logcat (matches NativeActivity behavior). Done
+    // before the EGL bootstrap so a failure there is visible.
+    err().rdbuf(&states->logcat);
+
     // Bootstrap EGL the same way SFML's NativeActivity does — this is what
     // EglContextImpl::getInitializedDisplay() expects to find later.
     // ensureGladLoaded populates the GLAD function pointers (eglGetDisplay,
@@ -175,10 +179,20 @@ void prepareHostedActivity(void* nativeWindow, int width, int height)
     // file-local to EglContext.cpp, hence the public helper.
     priv::EglContext::ensureGladLoaded();
     states->display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
-    eglInitialize(states->display, NULL, NULL);
+    if (eglInitialize(states->display, NULL, NULL) == EGL_FALSE)
+    {
+        err() << "prepareHostedActivity: eglInitialize failed (EGL error 0x"
+              << std::hex << eglGetError() << std::dec << ")" << std::endl;
+        return;
+    }
 
-    // Redirect stderr to logcat (matches NativeActivity behavior).
-    err().rdbuf(&states->logcat);
+    // ensureGladLoaded ran before any display was initialized, so GLAD could
+    // not read the EGL version and only loaded the 1.0 entry points. That
+    // goes unnoticed when HWUI renders with GL (it has already initialized
+    // the default display in this process), but with the Vulkan HWUI
+    // backend (default on recent Pixels) eglSwapInterval and friends stay
+    // NULL and the first RenderWindow creation jumps to address 0.
+    priv::EglContext::reloadGladForDisplay(states->display);
 }
 
 ////////////////////////////////////////////////////////////

@@ -112,6 +112,22 @@ public:
     static void ensureGladLoaded();
 
     ////////////////////////////////////////////////////////////
+    /// \brief Reload GLAD's EGL function pointers against an initialized display
+    ///
+    /// GLAD picks which EGL core versions to load from the version string
+    /// of the display it is given. ensureGladLoaded() runs before any
+    /// display is initialized (it has to: eglInitialize is itself loaded
+    /// through GLAD), so the version query fails and GLAD falls back to
+    /// EGL 1.0, leaving every 1.1+ entry point (eglSwapInterval,
+    /// eglGetCurrentContext, ...) NULL. Call this once eglInitialize has
+    /// succeeded on \a display to load the full set.
+    ///
+    /// \param display Initialized EGL display
+    ///
+    ////////////////////////////////////////////////////////////
+    static void reloadGladForDisplay(EGLDisplay display);
+
+    ////////////////////////////////////////////////////////////
     /// \brief Activate the context as the current target
     ///        for rendering
     ///

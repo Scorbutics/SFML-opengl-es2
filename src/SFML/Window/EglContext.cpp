@@ -273,6 +273,15 @@ void EglContext::ensureGladLoaded()
 
 
 ////////////////////////////////////////////////////////////
+void EglContext::reloadGladForDisplay(EGLDisplay display)
+{
+    EglContextImpl::ensureInit();
+
+    gladLoaderLoadEGL(display);
+}
+
+
+////////////////////////////////////////////////////////////
 bool EglContext::makeCurrent(bool current)
 {
     if (m_surface == EGL_NO_SURFACE)

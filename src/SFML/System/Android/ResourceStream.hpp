@@ -31,6 +31,7 @@
 #include <SFML/System/Export.hpp>
 #include <SFML/System/InputStream.hpp>
 #include <android/asset_manager.h>
+#include <cstdio>
 #include <string>
 
 
@@ -102,7 +103,8 @@ private:
     ////////////////////////////////////////////////////////////
     // Member data
     ////////////////////////////////////////////////////////////
-    AAsset* m_file; ///< The asset file to read
+    AAsset*    m_file;    ///< The asset file to read (NativeActivity apps)
+    std::FILE* m_stdFile; ///< Regular file to read (hosted mode: no ANativeActivity, no asset manager)
 };
 
 } // namespace priv

@@ -38,11 +38,23 @@ namespace priv
 
 ////////////////////////////////////////////////////////////
 ResourceStream::ResourceStream(const std::string& filename) :
-m_file (NULL)
+m_file   (NULL),
+m_stdFile(NULL)
 {
-    ActivityStates& states = getActivity();
-    Lock lock(states.mutex);
-    m_file = AAssetManager_open(states.activity->assetManager, filename.c_str(), AASSET_MODE_UNKNOWN);
+    // Hosted mode (sf::android::prepareHostedActivity) has no ANativeActivity
+    // and so no asset manager: dereferencing states.activity crashed every
+    // file open (segfault at 0x40, the assetManager offset). The host app
+    // reads its files from the regular file system there, like on desktop.
+    ActivityStates* const states = getActivityStatesPtr();
+    if (states != NULL && states->activity != NULL)
+    {
+        Lock lock(states->mutex);
+        m_file = AAssetManager_open(states->activity->assetManager, filename.c_str(), AASSET_MODE_UNKNOWN);
+    }
+    else
+    {
+        m_stdFile = std::fopen(filename.c_str(), "rb");
+    }
 }
 
 
@@ -53,13 +65,21 @@ ResourceStream::~ResourceStream()
     {
         AAsset_close(m_file);
     }
+    if (m_stdFile)
+    {
+        std::fclose(m_stdFile);
+    }
 }
 
 
 ////////////////////////////////////////////////////////////
 Int64 ResourceStream::read(void *data, Int64 size)
 {
-    if (m_file)
+    if (m_stdFile)
+    {
+        return static_cast<Int64>(std::fread(data, 1, static_cast<std::size_t>(size), m_stdFile));
+    }
+    else if (m_file)
     {
         return AAsset_read(m_file, data, static_cast<size_t>(size));
     }
@@ -73,7 +93,13 @@ Int64 ResourceStream::read(void *data, Int64 size)
 ////////////////////////////////////////////////////////////
 Int64 ResourceStream::seek(Int64 position)
 {
-    if (m_file)
+    if (m_stdFile)
+    {
+        if (std::fseek(m_stdFile, static_cast<long>(position), SEEK_SET))
+            return -1;
+        return tell();
+    }
+    else if (m_file)
     {
         return AAsset_seek(m_file, static_cast<off_t>(position), SEEK_SET);
     }
@@ -87,7 +113,11 @@ Int64 ResourceStream::seek(Int64 position)
 ////////////////////////////////////////////////////////////
 Int64 ResourceStream::tell()
 {
-    if (m_file)
+    if (m_stdFile)
+    {
+        return std::ftell(m_stdFile);
+    }
+    else if (m_file)
     {
         return getSize() - AAsset_getRemainingLength(m_file);
     }
@@ -101,7 +131,15 @@ Int64 ResourceStream::tell()
 ////////////////////////////////////////////////////////////
 Int64 ResourceStream::getSize()
 {
-    if (m_file)
+    if (m_stdFile)
+    {
+        const long position = std::ftell(m_stdFile);
+        std::fseek(m_stdFile, 0, SEEK_END);
+        const long size = std::ftell(m_stdFile);
+        std::fseek(m_stdFile, position, SEEK_SET);
+        return size;
+    }
+    else if (m_file)
     {
         return AAsset_getLength(m_file);
     }

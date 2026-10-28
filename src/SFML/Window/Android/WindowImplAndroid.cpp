@@ -392,6 +392,22 @@ void WindowImplAndroid::forwardEvent(const Event& event)
         }
 
         WindowImplAndroid::singleInstance->pushEvent(event);
+
+        // A (re-)attached surface may not have the size the window last
+        // knew: back from background after a rotation, a fold or a
+        // split-screen change, or a window created while no surface was
+        // attached (it keeps the requested VideoMode size). Only the
+        // implementation's m_size was refreshed above; WindowBase (and so
+        // every RenderTarget viewport) learns the size from Resized events
+        // alone. Follow GainedFocus with one carrying the real surface size.
+        if (event.type == Event::GainedFocus && states.window != NULL)
+        {
+            Event resized;
+            resized.type        = Event::Resized;
+            resized.size.width  = WindowImplAndroid::singleInstance->m_size.x;
+            resized.size.height = WindowImplAndroid::singleInstance->m_size.y;
+            WindowImplAndroid::singleInstance->pushEvent(resized);
+        }
     }
 }
 

@@ -243,13 +243,13 @@ m_config  (NULL)
     // Create EGL context
     createContext(shared);
 
-#if defined(SFML_SYSTEM_ANDROID) && !defined(SFML_SYSTEM_SWITCH)
+#if !defined(SFML_SYSTEM_ANDROID) && !defined(SFML_SYSTEM_SWITCH)
     // Create EGL surface (except on Android because the window is created
     // asynchronously, its activity manager will call it for us)
     createSurface(owner->getSystemHandle());
 #elif defined(SFML_SYSTEM_SWITCH)
     createSurface(nwindowGetDefault());
-#else
+#elif defined(SFML_SYSTEM_ANDROID)
     (void) owner;
     // On Android with the hosted-Activity flow (sf::android::prepareHostedActivity
     // populated states.window before this ctor ran), the surface is already

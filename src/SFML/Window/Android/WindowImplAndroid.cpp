@@ -29,6 +29,7 @@
 #include <SFML/Window/WindowStyle.hpp> // important to be included first (conflict with None)
 #include <SFML/Window/Android/WindowImplAndroid.hpp>
 #include <SFML/Window/Android/JoystickImpl.hpp>
+#include <SFML/Window/Android/InputImpl.hpp>
 #include <SFML/Window/Event.hpp>
 #include <SFML/System/Lock.hpp>
 #include <SFML/System/Err.hpp>
@@ -626,16 +627,19 @@ int WindowImplAndroid::processKeyEvent(AInputEvent* _event, ActivityStates& /* s
     int32_t metakey = AKeyEvent_getMetaState(_event);
 
     Event event;
-    event.key.code    = androidKeyToSF(key);
-    event.key.alt     = metakey & AMETA_ALT_ON;
-    event.key.control = false;
-    event.key.shift   = metakey & AMETA_SHIFT_ON;
+    event.key.code     = androidKeyToSF(key);
+    event.key.scancode = InputImpl::delocalize(event.key.code);
+    event.key.alt      = metakey & AMETA_ALT_ON;
+    event.key.control  = false;
+    event.key.shift    = metakey & AMETA_SHIFT_ON;
+    event.key.system   = false;
 
     switch (action)
     {
     case AKEY_EVENT_ACTION_DOWN:
         event.type = Event::KeyPressed;
         forwardEvent(event);
+        forwardControlCharacter(event.key.code);
         return 1;
     case AKEY_EVENT_ACTION_UP:
         event.type = Event::KeyReleased;
@@ -787,6 +791,22 @@ int WindowImplAndroid::processPointerEvent(bool isDown, AInputEvent* _event, Act
 
     forwardEvent(event);
     return 1;
+}
+
+
+////////////////////////////////////////////////////////////
+void WindowImplAndroid::forwardControlCharacter(Keyboard::Key key)
+{
+    // Desktop backends emit TextEntered for Backspace (the OS sends it as a
+    // character); Android key events have no unicode for it, so text input
+    // code relying on '\b' to erase would never see it.
+    if (key != Keyboard::Backspace)
+        return;
+
+    Event event;
+    event.type         = Event::TextEntered;
+    event.text.unicode = '\b';
+    forwardEvent(event);
 }
 
 

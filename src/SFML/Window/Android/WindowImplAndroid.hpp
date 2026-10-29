@@ -199,6 +199,16 @@ public:
     static Keyboard::Key androidKeyToSF(int32_t key);
 
     ////////////////////////////////////////////////////////////
+    /// \brief Forward the TextEntered event desktop backends send with a
+    ///        key press that has no Android unicode (Backspace)
+    ///
+    /// Public for the same reason as androidKeyToSF: the hosted input
+    /// injection (HostedAndroidWindow.cpp) emits key presses too.
+    ///
+    ////////////////////////////////////////////////////////////
+    static void forwardControlCharacter(Keyboard::Key key);
+
+    ////////////////////////////////////////////////////////////
     /// \brief Convert an Android gamepad button code to a SFML joystick index
     ///
     /// Public for the same reason as androidKeyToSF.

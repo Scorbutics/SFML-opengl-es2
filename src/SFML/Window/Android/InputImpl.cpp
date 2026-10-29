@@ -49,21 +49,154 @@ bool InputImpl::isKeyPressed(Keyboard::Scancode /* codes */)
     return false;
 }
 
-Keyboard::Key InputImpl::localize(Keyboard::Scancode /* code */)
+////////////////////////////////////////////////////////////
+// Android exposes no keyboard layout to native code: keys are mapped as on a
+// US QWERTY layout, the layout Android key codes are named after. Each entry
+// is a key, the scancode producing it and its description.
+namespace
 {
-    // Not applicable
+struct KeyMapping
+{
+    Keyboard::Key      key;
+    Keyboard::Scancode scancode;
+    const char*        description;
+};
+
+const KeyMapping keyMappings[] =
+{
+    { Keyboard::A, Keyboard::Scan::A, "A" },
+    { Keyboard::B, Keyboard::Scan::B, "B" },
+    { Keyboard::C, Keyboard::Scan::C, "C" },
+    { Keyboard::D, Keyboard::Scan::D, "D" },
+    { Keyboard::E, Keyboard::Scan::E, "E" },
+    { Keyboard::F, Keyboard::Scan::F, "F" },
+    { Keyboard::G, Keyboard::Scan::G, "G" },
+    { Keyboard::H, Keyboard::Scan::H, "H" },
+    { Keyboard::I, Keyboard::Scan::I, "I" },
+    { Keyboard::J, Keyboard::Scan::J, "J" },
+    { Keyboard::K, Keyboard::Scan::K, "K" },
+    { Keyboard::L, Keyboard::Scan::L, "L" },
+    { Keyboard::M, Keyboard::Scan::M, "M" },
+    { Keyboard::N, Keyboard::Scan::N, "N" },
+    { Keyboard::O, Keyboard::Scan::O, "O" },
+    { Keyboard::P, Keyboard::Scan::P, "P" },
+    { Keyboard::Q, Keyboard::Scan::Q, "Q" },
+    { Keyboard::R, Keyboard::Scan::R, "R" },
+    { Keyboard::S, Keyboard::Scan::S, "S" },
+    { Keyboard::T, Keyboard::Scan::T, "T" },
+    { Keyboard::U, Keyboard::Scan::U, "U" },
+    { Keyboard::V, Keyboard::Scan::V, "V" },
+    { Keyboard::W, Keyboard::Scan::W, "W" },
+    { Keyboard::X, Keyboard::Scan::X, "X" },
+    { Keyboard::Y, Keyboard::Scan::Y, "Y" },
+    { Keyboard::Z, Keyboard::Scan::Z, "Z" },
+    { Keyboard::Num0, Keyboard::Scan::Num0, "0" },
+    { Keyboard::Num1, Keyboard::Scan::Num1, "1" },
+    { Keyboard::Num2, Keyboard::Scan::Num2, "2" },
+    { Keyboard::Num3, Keyboard::Scan::Num3, "3" },
+    { Keyboard::Num4, Keyboard::Scan::Num4, "4" },
+    { Keyboard::Num5, Keyboard::Scan::Num5, "5" },
+    { Keyboard::Num6, Keyboard::Scan::Num6, "6" },
+    { Keyboard::Num7, Keyboard::Scan::Num7, "7" },
+    { Keyboard::Num8, Keyboard::Scan::Num8, "8" },
+    { Keyboard::Num9, Keyboard::Scan::Num9, "9" },
+    { Keyboard::Escape, Keyboard::Scan::Escape, "Escape" },
+    { Keyboard::LControl, Keyboard::Scan::LControl, "Left Control" },
+    { Keyboard::LShift, Keyboard::Scan::LShift, "Left Shift" },
+    { Keyboard::LAlt, Keyboard::Scan::LAlt, "Left Alt" },
+    { Keyboard::LSystem, Keyboard::Scan::LSystem, "Left Meta" },
+    { Keyboard::RControl, Keyboard::Scan::RControl, "Right Control" },
+    { Keyboard::RShift, Keyboard::Scan::RShift, "Right Shift" },
+    { Keyboard::RAlt, Keyboard::Scan::RAlt, "Right Alt" },
+    { Keyboard::RSystem, Keyboard::Scan::RSystem, "Right Meta" },
+    { Keyboard::Menu, Keyboard::Scan::Menu, "Menu" },
+    { Keyboard::LBracket, Keyboard::Scan::LBracket, "[" },
+    { Keyboard::RBracket, Keyboard::Scan::RBracket, "]" },
+    { Keyboard::Semicolon, Keyboard::Scan::Semicolon, ";" },
+    { Keyboard::Comma, Keyboard::Scan::Comma, "," },
+    { Keyboard::Period, Keyboard::Scan::Period, "." },
+    { Keyboard::Apostrophe, Keyboard::Scan::Apostrophe, "'" },
+    { Keyboard::Slash, Keyboard::Scan::Slash, "/" },
+    { Keyboard::Backslash, Keyboard::Scan::Backslash, "\\" },
+    { Keyboard::Grave, Keyboard::Scan::Grave, "`" },
+    { Keyboard::Equal, Keyboard::Scan::Equal, "=" },
+    { Keyboard::Hyphen, Keyboard::Scan::Hyphen, "-" },
+    { Keyboard::Space, Keyboard::Scan::Space, "Space" },
+    { Keyboard::Enter, Keyboard::Scan::Enter, "Enter" },
+    { Keyboard::Backspace, Keyboard::Scan::Backspace, "Backspace" },
+    { Keyboard::Tab, Keyboard::Scan::Tab, "Tab" },
+    { Keyboard::PageUp, Keyboard::Scan::PageUp, "Page Up" },
+    { Keyboard::PageDown, Keyboard::Scan::PageDown, "Page Down" },
+    { Keyboard::End, Keyboard::Scan::End, "End" },
+    { Keyboard::Home, Keyboard::Scan::Home, "Home" },
+    { Keyboard::Insert, Keyboard::Scan::Insert, "Insert" },
+    { Keyboard::Delete, Keyboard::Scan::Delete, "Delete" },
+    { Keyboard::Add, Keyboard::Scan::NumpadPlus, "Numpad +" },
+    { Keyboard::Subtract, Keyboard::Scan::NumpadMinus, "Numpad -" },
+    { Keyboard::Multiply, Keyboard::Scan::NumpadMultiply, "Numpad *" },
+    { Keyboard::Divide, Keyboard::Scan::NumpadDivide, "Numpad /" },
+    { Keyboard::Left, Keyboard::Scan::Left, "Left" },
+    { Keyboard::Right, Keyboard::Scan::Right, "Right" },
+    { Keyboard::Up, Keyboard::Scan::Up, "Up" },
+    { Keyboard::Down, Keyboard::Scan::Down, "Down" },
+    { Keyboard::Numpad0, Keyboard::Scan::Numpad0, "Numpad 0" },
+    { Keyboard::Numpad1, Keyboard::Scan::Numpad1, "Numpad 1" },
+    { Keyboard::Numpad2, Keyboard::Scan::Numpad2, "Numpad 2" },
+    { Keyboard::Numpad3, Keyboard::Scan::Numpad3, "Numpad 3" },
+    { Keyboard::Numpad4, Keyboard::Scan::Numpad4, "Numpad 4" },
+    { Keyboard::Numpad5, Keyboard::Scan::Numpad5, "Numpad 5" },
+    { Keyboard::Numpad6, Keyboard::Scan::Numpad6, "Numpad 6" },
+    { Keyboard::Numpad7, Keyboard::Scan::Numpad7, "Numpad 7" },
+    { Keyboard::Numpad8, Keyboard::Scan::Numpad8, "Numpad 8" },
+    { Keyboard::Numpad9, Keyboard::Scan::Numpad9, "Numpad 9" },
+    { Keyboard::F1, Keyboard::Scan::F1, "F1" },
+    { Keyboard::F2, Keyboard::Scan::F2, "F2" },
+    { Keyboard::F3, Keyboard::Scan::F3, "F3" },
+    { Keyboard::F4, Keyboard::Scan::F4, "F4" },
+    { Keyboard::F5, Keyboard::Scan::F5, "F5" },
+    { Keyboard::F6, Keyboard::Scan::F6, "F6" },
+    { Keyboard::F7, Keyboard::Scan::F7, "F7" },
+    { Keyboard::F8, Keyboard::Scan::F8, "F8" },
+    { Keyboard::F9, Keyboard::Scan::F9, "F9" },
+    { Keyboard::F10, Keyboard::Scan::F10, "F10" },
+    { Keyboard::F11, Keyboard::Scan::F11, "F11" },
+    { Keyboard::F12, Keyboard::Scan::F12, "F12" },
+    { Keyboard::F13, Keyboard::Scan::F13, "F13" },
+    { Keyboard::F14, Keyboard::Scan::F14, "F14" },
+    { Keyboard::F15, Keyboard::Scan::F15, "F15" },
+    { Keyboard::Pause, Keyboard::Scan::Pause, "Pause" },
+};
+}
+
+
+////////////////////////////////////////////////////////////
+Keyboard::Key InputImpl::localize(Keyboard::Scancode code)
+{
+    for (const KeyMapping& mapping : keyMappings)
+    {
+        if (mapping.scancode == code)
+            return mapping.key;
+    }
     return Keyboard::Unknown;
 }
 
-Keyboard::Scancode InputImpl::delocalize(Keyboard::Key /* key */)
+Keyboard::Scancode InputImpl::delocalize(Keyboard::Key key)
 {
-    // Not applicable
+    for (const KeyMapping& mapping : keyMappings)
+    {
+        if (mapping.key == key)
+            return mapping.scancode;
+    }
     return Keyboard::Scan::Unknown;
 }
 
-String InputImpl::getDescription(Keyboard::Scancode /* code */)
+String InputImpl::getDescription(Keyboard::Scancode code)
 {
-    // Not applicable
+    for (const KeyMapping& mapping : keyMappings)
+    {
+        if (mapping.scancode == code)
+            return mapping.description;
+    }
     return "";
 }
 

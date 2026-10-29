@@ -27,6 +27,7 @@
 ////////////////////////////////////////////////////////////
 #include <SFML/Window/Android/HostedAndroidWindow.hpp>
 #include <SFML/Window/Android/WindowImplAndroid.hpp>
+#include <SFML/Window/Android/InputImpl.hpp>
 #include <SFML/Window/Android/JoystickImpl.hpp>
 #include <SFML/Window/EglContext.hpp>
 #include <SFML/Window/Joystick.hpp>
@@ -310,10 +311,13 @@ namespace
     // populate it.
     void fillKeyEvent(Event& event, int androidKeyCode, int metaState)
     {
-        event.key.code    = priv::WindowImplAndroid::androidKeyToSF(androidKeyCode);
-        event.key.alt     = (metaState & AMETA_ALT_ON)   != 0;
-        event.key.control = false;
-        event.key.shift   = (metaState & AMETA_SHIFT_ON) != 0;
+        event.key.code     = priv::WindowImplAndroid::androidKeyToSF(androidKeyCode);
+        // Consumers matching keys by scancode (PSDK) saw an uninitialized one
+        event.key.scancode = priv::InputImpl::delocalize(event.key.code);
+        event.key.alt      = (metaState & AMETA_ALT_ON)   != 0;
+        event.key.control  = false;
+        event.key.shift    = (metaState & AMETA_SHIFT_ON) != 0;
+        event.key.system   = false;
     }
 }
 
@@ -321,16 +325,18 @@ namespace
 ////////////////////////////////////////////////////////////
 void injectHostedKeyDown(int androidKeyCode, int metaState, int repeatCount)
 {
-    // Drop OS-level auto-repeat: consumers like PSDK run their own time-
-    // based repeat handler and would otherwise double-count state changes.
-    // The initial press is repeatCount == 0; held-key repeats are > 0.
-    if (repeatCount > 0)
-        return;
-
     Event event;
     event.type = Event::KeyPressed;
     fillKeyEvent(event, androidKeyCode, metaState);
-    injectHostedEvent(event);
+
+    // Drop OS-level auto-repeat: consumers like PSDK run their own time-
+    // based repeat handler and would otherwise double-count state changes.
+    // The initial press is repeatCount == 0; held-key repeats are > 0.
+    if (repeatCount == 0)
+        injectHostedEvent(event);
+
+    // Text does repeat, as on desktop: holding Backspace keeps erasing
+    priv::WindowImplAndroid::forwardControlCharacter(event.key.code);
 }
 
 

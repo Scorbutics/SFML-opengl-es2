@@ -37,7 +37,6 @@
 #include <SFML/System/Err.hpp>
 
 #include <android/native_window.h>
-#include <dlfcn.h>
 
 // Declarations only — the GLAD EGL implementation storage (function pointers,
 // version flags) is emitted by EglContext.cpp via SF_GLAD_EGL_IMPLEMENTATION.
@@ -176,46 +175,24 @@ void prepareHostedActivity(void* nativeWindow, int width, int height)
 
     // Bootstrap EGL the same way SFML's NativeActivity does — this is what
     // EglContextImpl::getInitializedDisplay() expects to find later.
-    //
-    // The display is initialized BEFORE GLAD loads: GLAD picks which entry
-    // points to load from the version of the display it is given (or of the
-    // default one), and an uninitialized display has no version. Depending on
-    // the HWUI backend, the default display may be uninitialized (Vulkan:
-    // nothing initializes it) or being initialized by the RenderThread at
-    // the same moment (GL): GLAD then got no usable version and left even
-    // eglInitialize NULL (crash at address 0 on a Redmi Note 13 Pro 5G).
-    // eglGetDisplay / eglInitialize are taken straight from libEGL, since
-    // GLAD's pointers can't be trusted yet. eglInitialize on an already
-    // initialized display (HWUI GL) is allowed and just reports its version.
-    void* libEgl = dlopen("libEGL.so", RTLD_NOW | RTLD_LOCAL);
-    PFNEGLGETDISPLAYPROC getDisplay = libEgl ? reinterpret_cast<PFNEGLGETDISPLAYPROC>(dlsym(libEgl, "eglGetDisplay")) : NULL;
-    PFNEGLINITIALIZEPROC initialize = libEgl ? reinterpret_cast<PFNEGLINITIALIZEPROC>(dlsym(libEgl, "eglInitialize")) : NULL;
-    PFNEGLGETERRORPROC   getError   = libEgl ? reinterpret_cast<PFNEGLGETERRORPROC>(dlsym(libEgl, "eglGetError")) : NULL;
-    if (getDisplay == NULL || initialize == NULL || getError == NULL)
-    {
-        err() << "prepareHostedActivity: cannot resolve EGL from libEGL.so (" << dlerror() << ")" << std::endl;
-        return;
-    }
-    const EGLDisplay display = getDisplay(EGL_DEFAULT_DISPLAY);
-    if (initialize(display, NULL, NULL) == EGL_FALSE)
-    {
-        err() << "prepareHostedActivity: eglInitialize failed (EGL error 0x"
-              << std::hex << getError() << std::dec << ")" << std::endl;
-        return;
-    }
-    states->display = display;
-
     // ensureGladLoaded populates the GLAD function pointers (eglGetDisplay,
     // eglInitialize, ...) for this TU; the loader function itself is
-    // file-local to EglContext.cpp, hence the public helper. Its second pass
-    // reads states->display, now initialized.
+    // file-local to EglContext.cpp, hence the public helper.
     priv::EglContext::ensureGladLoaded();
+    states->display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
+    if (eglInitialize(states->display, NULL, NULL) == EGL_FALSE)
+    {
+        err() << "prepareHostedActivity: eglInitialize failed (EGL error 0x"
+              << std::hex << eglGetError() << std::dec << ")" << std::endl;
+        return;
+    }
 
-    // GLAD's loader is idempotent per process (EglContextImpl::ensureInit
-    // runs once): if an EglContext was created before this hosted activity,
-    // it loaded without our display. Reload for it explicitly, so that the
-    // EGL 1.1+ entry points (eglSwapInterval...) are present whatever the
-    // HWUI backend (they stayed NULL with the Vulkan one before).
+    // ensureGladLoaded ran before any display was initialized, so GLAD could
+    // not read the EGL version and only loaded the 1.0 entry points. That
+    // goes unnoticed when HWUI renders with GL (it has already initialized
+    // the default display in this process), but with the Vulkan HWUI
+    // backend (default on recent Pixels) eglSwapInterval and friends stay
+    // NULL and the first RenderWindow creation jumps to address 0.
     priv::EglContext::reloadGladForDisplay(states->display);
 }
 

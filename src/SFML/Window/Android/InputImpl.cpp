@@ -29,14 +29,24 @@
 #include <SFML/Window/Android/HostedAndroidWindow.hpp>
 #include <SFML/System/Android/Activity.hpp>
 #include <SFML/System/Lock.hpp>
+#include <SFML/System/Mutex.hpp>
 #include <SFML/System/Err.hpp>
 #include <jni.h>
 
 
 namespace
 {
-// Set by the host in hosted mode; guarded by the activity states' mutex
+// Set by the host in hosted mode. Its own mutex: the host registers it while
+// creating its Activity, before the hosted surface (and so the activity
+// states) exists.
 sf::android::HostedVirtualKeyboardHandler hostedVirtualKeyboardHandler = NULL;
+sf::Mutex hostedVirtualKeyboardMutex;
+
+sf::android::HostedVirtualKeyboardHandler getHostedVirtualKeyboardHandler()
+{
+    sf::Lock lock(hostedVirtualKeyboardMutex);
+    return hostedVirtualKeyboardHandler;
+}
 }
 
 
@@ -47,8 +57,7 @@ namespace android
 ////////////////////////////////////////////////////////////
 void setHostedVirtualKeyboardHandler(HostedVirtualKeyboardHandler handler)
 {
-    priv::ActivityStates& states = priv::getActivity();
-    Lock lock(states.mutex);
+    Lock lock(hostedVirtualKeyboardMutex);
     hostedVirtualKeyboardHandler = handler;
 }
 } // namespace android
@@ -225,15 +234,15 @@ void InputImpl::setVirtualKeyboardVisible(bool visible)
 {
     // todo: Check if the window is active
 
-    ActivityStates& states = getActivity();
-    Lock lock(states.mutex);
-
     // Hosted mode: the host shows the keyboard for its text field
-    if (hostedVirtualKeyboardHandler != NULL)
+    if (sf::android::HostedVirtualKeyboardHandler handler = getHostedVirtualKeyboardHandler())
     {
-        hostedVirtualKeyboardHandler(visible ? 1 : 0);
+        handler(visible ? 1 : 0);
         return;
     }
+
+    ActivityStates& states = getActivity();
+    Lock lock(states.mutex);
 
     // Pick the JNI context: prefer the NativeActivity-provided one when
     // present, otherwise fall back to the hosted-mode context populated by

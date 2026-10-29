@@ -77,19 +77,43 @@ namespace
 
 
         ////////////////////////////////////////////////////////////
+        // GLAD's EGL function pointers are process-wide: loading them must
+        // be serialized. In hosted Android mode the UI thread (surface
+        // attach) and the render thread (its first context) get here at the
+        // same time; the one finding `initialized` already set while the
+        // other was still loading went on with eglGetDisplay loaded but not
+        // yet eglInitialize, and called address 0.
+        sf::Mutex& gladMutex()
+        {
+#if defined(SFML_SYSTEM_ANDROID)
+            // The activity's mutex: getInitializedDisplay() takes it while
+            // loading, and threads holding it create contexts. A mutex of
+            // our own would be taken in the opposite order by them.
+            return sf::priv::getActivity().mutex;
+#else
+            static sf::Mutex mutex;
+            return mutex;
+#endif
+        }
+
+
+        ////////////////////////////////////////////////////////////
         void ensureInit()
         {
+            sf::Lock lock(gladMutex());
+
             static bool initialized = false;
             if (!initialized)
             {
-                initialized = true;
-
                 // We don't check the return value since the extension
                 // flags are cleared even if loading fails
                 gladLoaderLoadEGL(EGL_NO_DISPLAY);
 
                 // Continue loading with a display
                 gladLoaderLoadEGL(getInitializedDisplay());
+
+                // Only once loaded: another thread may be waiting on the lock
+                initialized = true;
             }
         }
     }
@@ -275,6 +299,8 @@ void EglContext::ensureGladLoaded()
 ////////////////////////////////////////////////////////////
 void EglContext::reloadGladForDisplay(EGLDisplay display)
 {
+    sf::Lock lock(EglContextImpl::gladMutex());
+
     EglContextImpl::ensureInit();
 
     gladLoaderLoadEGL(display);

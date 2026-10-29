@@ -26,14 +26,34 @@
 // Headers
 ////////////////////////////////////////////////////////////
 #include <SFML/Window/Android/InputImpl.hpp>
+#include <SFML/Window/Android/HostedAndroidWindow.hpp>
 #include <SFML/System/Android/Activity.hpp>
 #include <SFML/System/Lock.hpp>
 #include <SFML/System/Err.hpp>
 #include <jni.h>
 
 
+namespace
+{
+// Set by the host in hosted mode; guarded by the activity states' mutex
+sf::android::HostedVirtualKeyboardHandler hostedVirtualKeyboardHandler = NULL;
+}
+
+
 namespace sf
 {
+namespace android
+{
+////////////////////////////////////////////////////////////
+void setHostedVirtualKeyboardHandler(HostedVirtualKeyboardHandler handler)
+{
+    priv::ActivityStates& states = priv::getActivity();
+    Lock lock(states.mutex);
+    hostedVirtualKeyboardHandler = handler;
+}
+} // namespace android
+
+
 namespace priv
 {
 ////////////////////////////////////////////////////////////
@@ -207,6 +227,13 @@ void InputImpl::setVirtualKeyboardVisible(bool visible)
 
     ActivityStates& states = getActivity();
     Lock lock(states.mutex);
+
+    // Hosted mode: the host shows the keyboard for its text field
+    if (hostedVirtualKeyboardHandler != NULL)
+    {
+        hostedVirtualKeyboardHandler(visible ? 1 : 0);
+        return;
+    }
 
     // Pick the JNI context: prefer the NativeActivity-provided one when
     // present, otherwise fall back to the hosted-mode context populated by
@@ -401,3 +428,10 @@ Vector2i InputImpl::getTouchPosition(unsigned int finger, const WindowBase& /* r
 } // namespace priv
 
 } // namespace sf
+
+
+////////////////////////////////////////////////////////////
+extern "C" void sf_android_set_hosted_virtual_keyboard_handler(void (*handler)(int visible))
+{
+    sf::android::setHostedVirtualKeyboardHandler(handler);
+}

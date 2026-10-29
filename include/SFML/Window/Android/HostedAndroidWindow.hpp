@@ -130,6 +130,27 @@ SFML_WINDOW_API void setHostedJniContext(JavaVM* vm, jobject activity);
 
 
 ////////////////////////////////////////////////////////////
+/// \brief Let the host show and hide the virtual keyboard
+///
+/// The hosted window is a View of the host, which knows the View that must
+/// receive the typed text (a text field: the keyboard cannot type into the
+/// window's own View). While a handler is set,
+/// sf::Keyboard::setVirtualKeyboardVisible calls it instead of the
+/// InputMethodManager on the window's decor View.
+///
+/// The handler is called on the thread calling setVirtualKeyboardVisible.
+/// It takes an int so C code can register one, also through
+/// sf_android_set_hosted_virtual_keyboard_handler (C linkage).
+///
+/// \param handler  Called with 1 to show, 0 to hide; NULL restores the
+///                 default behavior.
+///
+////////////////////////////////////////////////////////////
+typedef void (*HostedVirtualKeyboardHandler)(int visible);
+SFML_WINDOW_API void setHostedVirtualKeyboardHandler(HostedVirtualKeyboardHandler handler);
+
+
+////////////////////////////////////////////////////////////
 // Hosted input injection
 //
 // These mirror what WindowImplAndroid::processKeyEvent and
@@ -198,6 +219,12 @@ SFML_WINDOW_API void injectHostedJoystickDisconnected(int deviceId);
 
 } // namespace android
 } // namespace sf
+
+////////////////////////////////////////////////////////////
+/// \brief C linkage of sf::android::setHostedVirtualKeyboardHandler
+///
+////////////////////////////////////////////////////////////
+extern "C" SFML_WINDOW_API void sf_android_set_hosted_virtual_keyboard_handler(void (*handler)(int visible));
 
 
 #endif // SFML_HOSTEDANDROIDWINDOW_HPP

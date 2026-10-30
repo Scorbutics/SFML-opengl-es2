@@ -87,8 +87,10 @@
     #define GLEXT_blend_equation_separate             true
     #define GLEXT_glBlendEquationSeparate             glBlendEquationSeparate
 
-    // Core since 2.0 - OES_texture_npot
-    #define GLEXT_texture_non_power_of_two            false
+    // OES_texture_npot: ES 2.0 core NPOT textures can't repeat nor have mipmaps,
+    // the extension lifts both (desktop's ARB_texture_non_power_of_two). Without
+    // it, textures are padded to a power of two (shaders then see factor_npot < 1)
+    #define GLEXT_texture_non_power_of_two            SF_GLAD_GL_OES_texture_npot
 
     // Core since 2.0 - OES_framebuffer_object
     #define GLEXT_framebuffer_object                  true

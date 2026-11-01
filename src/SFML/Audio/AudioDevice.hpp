@@ -29,6 +29,7 @@
 // Headers
 ////////////////////////////////////////////////////////////
 #include <SFML/System/Vector3.hpp>
+#include <functional>
 #include <set>
 #include <string>
 
@@ -182,6 +183,39 @@ public:
     ///
     ////////////////////////////////////////////////////////////
     static Vector3f getUpVector();
+
+    ////////////////////////////////////////////////////////////
+    /// \brief Pause or resume all the audio output
+    ///
+    /// The device stops mixing (ALC_SOFT_pause_device): every sound
+    /// and music stops where it is, and goes on from there once
+    /// resumed. Meanwhile the streams' threads wait instead of
+    /// polling (when the device supports the pause: else it keeps
+    /// playing, and so do they). A device opened while paused starts
+    /// paused.
+    ///
+    /// \param paused True to pause, false to resume
+    ///
+    ////////////////////////////////////////////////////////////
+    static void setPaused(bool paused);
+
+    ////////////////////////////////////////////////////////////
+    /// \brief Block a stream's thread while the output is paused
+    ///
+    /// \param isStreaming False once the stream was stopped: the
+    ///                    wait ends (see wakePausedStreams)
+    ///
+    /// \return True if it waited
+    ///
+    ////////////////////////////////////////////////////////////
+    static bool waitWhilePaused(const std::function<bool()>& isStreaming);
+
+    ////////////////////////////////////////////////////////////
+    /// \brief Make the streams waiting in waitWhilePaused check
+    ///        whether they were stopped
+    ///
+    ////////////////////////////////////////////////////////////
+    static void wakePausedStreams();
 };
 
 } // namespace priv

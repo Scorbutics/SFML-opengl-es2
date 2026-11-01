@@ -342,6 +342,13 @@ bool WindowImplAndroid::hasFocus() const
 ////////////////////////////////////////////////////////////
 void WindowImplAndroid::forwardEvent(const Event& event)
 {
+    forwardEventToWindow(event);
+}
+
+
+////////////////////////////////////////////////////////////
+bool WindowImplAndroid::forwardEventToWindow(const Event& event)
+{
     // Hosted mode calls this from the Android UI thread while the render
     // thread runs processEvents() (which reads and clears the flags below
     // under states.mutex) and may destroy the window (which clears
@@ -350,7 +357,7 @@ void WindowImplAndroid::forwardEvent(const Event& event)
     // here can't be lost to a concurrent clear.
     ActivityStates* const statesPtr = getActivityStatesPtr();
     if (statesPtr == NULL)
-        return;
+        return false;
     ActivityStates& states = *statesPtr;
     Lock lock(states.mutex);
 
@@ -409,7 +416,9 @@ void WindowImplAndroid::forwardEvent(const Event& event)
             resized.size.height = WindowImplAndroid::singleInstance->m_size.y;
             WindowImplAndroid::singleInstance->pushEvent(resized);
         }
+        return true;
     }
+    return false;
 }
 
 

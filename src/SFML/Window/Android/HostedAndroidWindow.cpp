@@ -287,11 +287,11 @@ void clearHostedSurfaceWindow()
 
 
 ////////////////////////////////////////////////////////////
-void injectHostedEvent(const Event& event)
+bool injectHostedEvent(const Event& event)
 {
     // forwardEvent is a public static on WindowImplAndroid and already
     // performs the GainedFocus/LostFocus housekeeping plus pushEvent.
-    priv::WindowImplAndroid::forwardEvent(event);
+    return priv::WindowImplAndroid::forwardEventToWindow(event);
 }
 
 

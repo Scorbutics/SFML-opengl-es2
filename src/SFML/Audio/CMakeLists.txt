@@ -32,6 +32,9 @@ set(SRC
     ${SRCROOT}/SoundStream.cpp
     ${INCROOT}/SoundStream.hpp
 )
+if(SFML_OS_ANDROID)
+    list(APPEND SRC ${INCROOT}/Android/HostedAudio.hpp)
+endif()
 source_group("" FILES ${SRC})
 
 set(CODECS_SRC

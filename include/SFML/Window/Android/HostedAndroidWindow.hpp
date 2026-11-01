@@ -83,8 +83,10 @@ SFML_WINDOW_API void notifyHostedSurfaceResized(int width, int height);
 /// (View.OnTouchListener etc.) into SFML's event pump. Mirrors what
 /// SFML's NativeActivity callbacks do internally.
 ///
+/// \return True if a window queued it, false if there is none (dropped)
+///
 ////////////////////////////////////////////////////////////
-SFML_WINDOW_API void injectHostedEvent(const Event& event);
+SFML_WINDOW_API bool injectHostedEvent(const Event& event);
 
 ////////////////////////////////////////////////////////////
 /// \brief Clear states.window without tearing down ActivityStates.

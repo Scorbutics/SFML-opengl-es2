@@ -26,9 +26,12 @@
 // Headers
 ////////////////////////////////////////////////////////////
 #include <SFML/Audio/AudioDevice.hpp>
+#include <SFML/Audio/Android/HostedAudio.hpp>
 #include <SFML/Audio/ALCheck.hpp>
 #include <SFML/Audio/Listener.hpp>
 #include <SFML/System/Err.hpp>
+#include <condition_variable>
+#include <mutex>
 #include <vector>
 
 #if defined(__APPLE__)
@@ -48,6 +51,32 @@ namespace
     sf::Vector3f listenerPosition (0.f, 0.f, 0.f);
     sf::Vector3f listenerDirection(0.f, 0.f, -1.f);
     sf::Vector3f listenerUpVector (0.f, 1.f, 0.f);
+
+    // AudioDevice::setPaused's state; pauseMutex also guards audioDevice
+    // against a pause from another thread while it is opened or closed
+    std::mutex              pauseMutex;
+    std::condition_variable pauseChanged;
+    bool                    outputPaused = false;
+    // The device really stopped mixing: only then may the streams wait
+    // (a device still playing would drain their queues)
+    bool                    devicePaused = false;
+
+    // Apply outputPaused to the device. Caller holds pauseMutex.
+    void applyDevicePause()
+    {
+        devicePaused = false;
+        if (!audioDevice || alcIsExtensionPresent(audioDevice, "ALC_SOFT_pause_device") == ALC_FALSE)
+            return;
+
+        typedef void (ALC_APIENTRY *DevicePauseFunc)(ALCdevice*);
+        DevicePauseFunc pauseOrResume = reinterpret_cast<DevicePauseFunc>(
+            alcGetProcAddress(audioDevice, outputPaused ? "alcDevicePauseSOFT" : "alcDeviceResumeSOFT"));
+        if (pauseOrResume)
+        {
+            pauseOrResume(audioDevice);
+            devicePaused = outputPaused;
+        }
+    }
 }
 
 namespace sf
@@ -57,6 +86,8 @@ namespace priv
 ////////////////////////////////////////////////////////////
 AudioDevice::AudioDevice()
 {
+    std::lock_guard<std::mutex> lock(pauseMutex);
+
     // Create the device
     audioDevice = alcOpenDevice(NULL);
 
@@ -80,6 +111,9 @@ AudioDevice::AudioDevice()
             alCheck(alListenerf(AL_GAIN, listenerVolume * 0.01f));
             alCheck(alListener3f(AL_POSITION, listenerPosition.x, listenerPosition.y, listenerPosition.z));
             alCheck(alListenerfv(AL_ORIENTATION, orientation));
+
+            if (outputPaused)
+                applyDevicePause();
         }
         else
         {
@@ -96,14 +130,19 @@ AudioDevice::AudioDevice()
 ////////////////////////////////////////////////////////////
 AudioDevice::~AudioDevice()
 {
+    std::lock_guard<std::mutex> lock(pauseMutex);
+
     // Destroy the context
     alcMakeContextCurrent(NULL);
     if (audioContext)
         alcDestroyContext(audioContext);
+    audioContext = NULL;
 
-    // Destroy the device
+    // Destroy the device (NULL after: setPaused may come later)
     if (audioDevice)
         alcCloseDevice(audioDevice);
+    audioDevice = NULL;
+    devicePaused = false;
 }
 
 
@@ -238,6 +277,53 @@ Vector3f AudioDevice::getUpVector()
     return listenerUpVector;
 }
 
+////////////////////////////////////////////////////////////
+void AudioDevice::setPaused(bool paused)
+{
+    {
+        std::lock_guard<std::mutex> lock(pauseMutex);
+        if (outputPaused == paused)
+            return;
+
+        outputPaused = paused;
+        applyDevicePause();
+    }
+    pauseChanged.notify_all();
+}
+
+
+////////////////////////////////////////////////////////////
+bool AudioDevice::waitWhilePaused(const std::function<bool()>& isStreaming)
+{
+    std::unique_lock<std::mutex> lock(pauseMutex);
+    if (!devicePaused)
+        return false;
+
+    pauseChanged.wait(lock, [&] { return !devicePaused || !isStreaming(); });
+    return true;
+}
+
+
+////////////////////////////////////////////////////////////
+void AudioDevice::wakePausedStreams()
+{
+    // Under the mutex: a stream checking isStreaming right now waits
+    // before this notification, not after it
+    {
+        std::lock_guard<std::mutex> lock(pauseMutex);
+    }
+    pauseChanged.notify_all();
+}
+
 } // namespace priv
 
 } // namespace sf
+
+
+#ifdef SFML_SYSTEM_ANDROID
+////////////////////////////////////////////////////////////
+extern "C" SFML_AUDIO_API void sf_android_set_hosted_audio_paused(int paused)
+{
+    sf::priv::AudioDevice::setPaused(paused != 0);
+}
+#endif

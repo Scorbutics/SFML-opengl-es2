@@ -186,6 +186,8 @@ public:
     virtual bool hasFocus() const;
 
     static void forwardEvent(const Event& event);
+    // forwardEvent, telling whether a window got the event (false: none to queue it)
+    static bool forwardEventToWindow(const Event& event);
     static WindowImplAndroid* singleInstance;
 
     ////////////////////////////////////////////////////////////

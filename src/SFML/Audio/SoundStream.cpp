@@ -75,6 +75,7 @@ SoundStream::~SoundStream()
         Lock lock(m_threadMutex);
         m_isStreaming = false;
     }
+    priv::AudioDevice::wakePausedStreams();
 
     // Wait for the thread to terminate
     m_thread.wait();
@@ -178,6 +179,7 @@ void SoundStream::stop()
         Lock lock(m_threadMutex);
         m_isStreaming = false;
     }
+    priv::AudioDevice::wakePausedStreams();
 
     // Wait for the thread to terminate
     m_thread.wait();
@@ -413,8 +415,13 @@ void SoundStream::streamData()
             break;
         }
 
-        // Leave some time for the other threads if the stream is still playing
-        if (SoundSource::getStatus() != Stopped)
+        // Leave some time for the other threads if the stream is still playing,
+        // all of it while the output is paused: nothing plays, no need to poll
+        if (SoundSource::getStatus() != Stopped && !priv::AudioDevice::waitWhilePaused([this]
+            {
+                Lock lock(m_threadMutex);
+                return m_isStreaming;
+            }))
             sleep(m_processingInterval);
     }
 

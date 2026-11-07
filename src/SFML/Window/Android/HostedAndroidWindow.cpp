@@ -179,6 +179,13 @@ void prepareHostedActivity(void* nativeWindow, int width, int height)
     // eglInitialize, ...) for this TU; the loader function itself is
     // file-local to EglContext.cpp, hence the public helper.
     priv::EglContext::ensureGladLoaded();
+    if (eglGetDisplay == NULL || eglInitialize == NULL)
+    {
+        // Report it instead of jumping to address 0
+        err() << "prepareHostedActivity: EGL entry points unavailable (eglGetDisplay "
+              << (eglGetDisplay != NULL) << ", eglInitialize " << (eglInitialize != NULL) << ")" << std::endl;
+        return;
+    }
     states->display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
     if (eglInitialize(states->display, NULL, NULL) == EGL_FALSE)
     {

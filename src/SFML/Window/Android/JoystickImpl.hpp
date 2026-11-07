@@ -33,6 +33,12 @@ namespace sf
 namespace priv
 {
 
+////////////////////////////////////////////////////////////
+/// Axis values exactly as Android reports them, in [-1, 1].
+/// In particular yHatAxis keeps Android's sign (-1 is up):
+/// JoystickImpl::update converts it to SFML's PovY, where up is
+/// positive, so every producer pushes the same raw values.
+////////////////////////////////////////////////////////////
 struct JoystickMotionData
 {
     float xHatAxis = 0.f;
@@ -49,8 +55,22 @@ enum class JoystickEventType
 {
     Key,
     Motion,
-    Connection
+    Connection,
+    Dpad      ///< index holds JoystickDpad bits, pressed tells down/up
 };
+
+////////////////////////////////////////////////////////////
+/// D-pad directions of a controller reporting its D-pad as
+/// AKEYCODE_DPAD_* keys instead of the AXIS_HAT_X/Y axes
+////////////////////////////////////////////////////////////
+enum JoystickDpad : unsigned int
+{
+    DpadUp    = 1 << 0,
+    DpadDown  = 1 << 1,
+    DpadLeft  = 1 << 2,
+    DpadRight = 1 << 3
+};
+
 struct JoystickEvent
 {
     Int32 deviceId = 0;
@@ -134,6 +154,23 @@ public:
     ///
     ////////////////////////////////////////////////////////////
     static void pushEvent(JoystickEvent event);
+
+    ////////////////////////////////////////////////////////////
+    /// \brief Enqueue a gamepad key event, as Android reports it
+    ///
+    /// AKEYCODE_DPAD_* keys move the PovX / PovY axes, the way a
+    /// controller reporting its D-pad through AXIS_HAT_X/Y does,
+    /// so both kinds of controllers look the same to the game.
+    /// The other gamepad keys are buttons.
+    ///
+    /// \param deviceId       Android input device id
+    /// \param androidKeyCode AKEYCODE_* of the key
+    /// \param pressed        True when the key went down
+    ///
+    /// \return False if the key is not a gamepad key (dropped)
+    ///
+    ////////////////////////////////////////////////////////////
+    static bool pushKeyEvent(Int32 deviceId, int androidKeyCode, bool pressed);
 
 private:
 

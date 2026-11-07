@@ -376,19 +376,9 @@ void injectHostedText(unsigned int unicodeCodepoint)
 ////////////////////////////////////////////////////////////
 void injectHostedJoystickButton(int deviceId, int androidKeyCode, bool pressed)
 {
-    // Reuse WindowImplAndroid's gamepad-button table. Unrecognised keycodes
-    // map to Joystick::ButtonCount and are dropped, matching what
-    // processJoystickKeyEvent does.
-    unsigned int index = priv::WindowImplAndroid::androidJoystickKeyToIndex(androidKeyCode);
-    if (index >= Joystick::ButtonCount)
-        return;
-
-    priv::JoystickImpl::pushEvent(priv::JoystickEvent {
-        deviceId,
-        priv::JoystickEventType::Key,
-        index,
-        pressed
-    });
+    // Same handling as WindowImplAndroid::processJoystickKeyEvent: D-pad
+    // keys move PovX / PovY, unrecognised keycodes are dropped.
+    priv::JoystickImpl::pushKeyEvent(deviceId, androidKeyCode, pressed);
 }
 
 
@@ -399,11 +389,10 @@ void injectHostedJoystickAxis(int   deviceId,
                               float hatX,     float hatY,
                               float lTrigger, float rTrigger)
 {
-    // Axes pass through at [-1, 1]; JoystickImpl::update scales by 100
-    // before storing into the polled state used by WindowImpl's joystick
-    // event generator. Y-axes match the convention in processJoystickMotionEvent
-    // (no inversion); caller is responsible for the Y-hat sign-flip if it
-    // wants WindowImplAndroid-compatible behaviour.
+    // Raw Android values, as WindowImplAndroid::processJoystickMotionEvent
+    // pushes them: JoystickImpl::update scales them by 100 and turns the
+    // hat Y (negative up on Android) into SFML's PovY (positive up). The
+    // caller must not flip any sign itself.
     priv::JoystickImpl::pushEvent(priv::JoystickEvent {
         deviceId,
         priv::JoystickEventType::Motion,

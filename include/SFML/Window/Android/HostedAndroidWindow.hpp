@@ -192,9 +192,9 @@ SFML_WINDOW_API void injectHostedText(unsigned int unicodeCodepoint);
 ////////////////////////////////////////////////////////////
 /// \brief Inject a gamepad button down/up event.
 ///
-/// androidKeyCode must be one of the AKEYCODE_BUTTON_* / AKEYCODE_DPAD_*
-/// values that androidJoystickKeyToIndex recognises. Other keycodes are
-/// silently dropped.
+/// androidKeyCode is an AKEYCODE_BUTTON_* (a joystick button) or an
+/// AKEYCODE_DPAD_* (moves the PovX / PovY axes, like a D-pad reported
+/// through AXIS_HAT_X/Y). Other keycodes are silently dropped.
 ///
 ////////////////////////////////////////////////////////////
 SFML_WINDOW_API void injectHostedJoystickButton(int deviceId, int androidKeyCode, bool pressed);
@@ -202,9 +202,11 @@ SFML_WINDOW_API void injectHostedJoystickButton(int deviceId, int androidKeyCode
 ////////////////////////////////////////////////////////////
 /// \brief Inject gamepad analog-axis state.
 ///
-/// Axis values are in [-1, 1] as returned by AMotionEvent_getAxisValue.
-/// They are scaled to SFML's [-100, 100] range internally to match what
-/// WindowImplAndroid::processJoystickMotionEvent feeds into JoystickImpl.
+/// Axis values are in [-1, 1] exactly as returned by
+/// AMotionEvent_getAxisValue / MotionEvent.getAxisValue, signs included:
+/// pass AXIS_HAT_Y unchanged. They are scaled to SFML's [-100, 100] range
+/// internally and the hat Y is turned into PovY (positive up), the same
+/// as for WindowImplAndroid::processJoystickMotionEvent.
 ///
 ////////////////////////////////////////////////////////////
 SFML_WINDOW_API void injectHostedJoystickAxis(int   deviceId,

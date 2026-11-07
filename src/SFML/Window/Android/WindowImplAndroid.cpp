@@ -512,7 +512,7 @@ int WindowImplAndroid::processJoystickMotionEvent(AInputEvent* _event, ActivityS
 
     JoystickImpl::pushEvent(JoystickEvent { deviceId, JoystickEventType::Motion, Joystick::ButtonCount, false, JoystickMotionData {
         AMotionEvent_getAxisValue(_event, AMOTION_EVENT_AXIS_HAT_X, 0),
-        - AMotionEvent_getAxisValue(_event, AMOTION_EVENT_AXIS_HAT_Y, 0),
+        AMotionEvent_getAxisValue(_event, AMOTION_EVENT_AXIS_HAT_Y, 0),
         AMotionEvent_getAxisValue(_event, AMOTION_EVENT_AXIS_LTRIGGER, 0),
         AMotionEvent_getAxisValue(_event, AMOTION_EVENT_AXIS_RTRIGGER, 0),
         AMotionEvent_getAxisValue(_event, AMOTION_EVENT_AXIS_X, 0),
@@ -544,14 +544,7 @@ int WindowImplAndroid::processJoystickKeyEvent(AInputEvent* _event, ActivityStat
             break;
     }
 
-    unsigned int index = androidJoystickKeyToIndex(key);
-    if (index < Joystick::ButtonCount)
-    {
-        JoystickImpl::pushEvent(JoystickEvent { deviceId, JoystickEventType::Key, index, pressed });
-        return 1;
-    }
-
-    return 0;
+    return JoystickImpl::pushKeyEvent(deviceId, key, pressed) ? 1 : 0;
 }
 
 ////////////////////////////////////////////////////////////
@@ -935,33 +928,6 @@ Keyboard::Key WindowImplAndroid::androidKeyToSF(int32_t key)
     }
 }
 
-
-
-////////////////////////////////////////////////////////////
-unsigned int WindowImplAndroid::androidJoystickKeyToIndex(int32_t key)
-{
-    switch (key)
-    {
-        case AKEYCODE_BUTTON_A:           return 0;
-        case AKEYCODE_BUTTON_B:           return 1;
-        case AKEYCODE_BUTTON_X:           return 2;
-        case AKEYCODE_BUTTON_Y:           return 3;
-        case AKEYCODE_BUTTON_L1:          return 4;
-        case AKEYCODE_BUTTON_R1:          return 5;
-        case AKEYCODE_BUTTON_L2:          return 6;
-        case AKEYCODE_BUTTON_R2:          return 7;
-        case AKEYCODE_BUTTON_THUMBL:      return 8;
-        case AKEYCODE_BUTTON_THUMBR:      return 9;
-        case AKEYCODE_BUTTON_START:       return 10;
-        case AKEYCODE_BUTTON_SELECT:      return 11;
-        case AKEYCODE_BUTTON_MODE:        return 12;
-        case AKEYCODE_DPAD_UP:            return 13;
-        case AKEYCODE_DPAD_DOWN:          return 14;
-        case AKEYCODE_DPAD_LEFT:          return 15;
-        case AKEYCODE_DPAD_RIGHT:         return 16;
-        default:                          return Joystick::ButtonCount;
-    }
-}
 
 
 ////////////////////////////////////////////////////////////

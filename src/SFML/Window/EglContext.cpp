@@ -98,6 +98,53 @@ namespace
 
 
         ////////////////////////////////////////////////////////////
+        // GLAD loads the core EGL entry points (eglInitialize,
+        // eglChooseConfig, eglMakeCurrent...) only when the EGL version it
+        // reads allows it, while eglGetDisplay, eglQueryString and the other
+        // bootstrap ones are always loaded. When that version read fails
+        // before the display is initialized (seen on the Ayn Thor: Adreno 740,
+        // Android 13), every core entry point stays NULL and the hosted attach
+        // jumps to address 0 on eglInitialize. Android's libEGL implements
+        // EGL 1.4 at least: load the core entry points regardless.
+        void ensureCoreEgl()
+        {
+            if (eglInitialize != NULL && eglChooseConfig != NULL && eglMakeCurrent != NULL)
+                return;
+
+            sf::err() << "EGL: core entry points not loaded by GLAD (1.0 flag "
+                      << SF_GLAD_EGL_VERSION_1_0 << ", 1.4 flag " << SF_GLAD_EGL_VERSION_1_4
+                      << "), loading them directly" << std::endl;
+
+            void* handle = sf_glad_egl_dlopen_handle();
+            if (handle == NULL)
+            {
+                sf::err() << "EGL: libEGL could not be opened" << std::endl;
+                return;
+            }
+
+            struct _sf_glad_egl_userptr userptr = sf_glad_egl_build_userptr(handle);
+            if (userptr.get_proc_address_ptr == NULL)
+            {
+                sf::err() << "EGL: eglGetProcAddress not found in libEGL" << std::endl;
+                return;
+            }
+
+            SF_GLAD_EGL_VERSION_1_0 = 1;
+            SF_GLAD_EGL_VERSION_1_1 = 1;
+            SF_GLAD_EGL_VERSION_1_2 = 1;
+            SF_GLAD_EGL_VERSION_1_3 = 1;
+            SF_GLAD_EGL_VERSION_1_4 = 1;
+            sf_glad_egl_load_EGL_VERSION_1_0(sf_glad_egl_get_proc, &userptr);
+            sf_glad_egl_load_EGL_VERSION_1_1(sf_glad_egl_get_proc, &userptr);
+            sf_glad_egl_load_EGL_VERSION_1_2(sf_glad_egl_get_proc, &userptr);
+            sf_glad_egl_load_EGL_VERSION_1_4(sf_glad_egl_get_proc, &userptr);
+
+            if (eglInitialize == NULL)
+                sf::err() << "EGL: eglInitialize still NULL after direct loading" << std::endl;
+        }
+
+
+        ////////////////////////////////////////////////////////////
         void ensureInit()
         {
             sf::Lock lock(gladMutex());
@@ -108,9 +155,11 @@ namespace
                 // We don't check the return value since the extension
                 // flags are cleared even if loading fails
                 gladLoaderLoadEGL(EGL_NO_DISPLAY);
+                ensureCoreEgl();
 
                 // Continue loading with a display
                 gladLoaderLoadEGL(getInitializedDisplay());
+                ensureCoreEgl();
 
                 // Only once loaded: another thread may be waiting on the lock
                 initialized = true;
@@ -304,6 +353,7 @@ void EglContext::reloadGladForDisplay(EGLDisplay display)
     EglContextImpl::ensureInit();
 
     gladLoaderLoadEGL(display);
+    EglContextImpl::ensureCoreEgl();
 }
 
 

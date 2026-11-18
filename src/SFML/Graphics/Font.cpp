@@ -140,7 +140,7 @@ Font::~Font()
 ////////////////////////////////////////////////////////////
 bool Font::loadFromFile(const std::string& filename)
 {
-    #ifndef SFML_SYSTEM_ANDROID
+    #if !defined(SFML_SYSTEM_ANDROID) || !defined(SFML_ANDROID_LOAD_FROM_ASSETS)
 
     // Cleanup the previous resources
     cleanup();

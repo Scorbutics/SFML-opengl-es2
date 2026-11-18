@@ -51,14 +51,17 @@ set(VERSION_MINOR 6)
 set(VERSION_PATCH 1)
 
 # add an option for choosing the build type (shared or static)
-if(NOT (SFML_OS_IOS OR SFML_OS_ANDROID))
+# (Android defaults to shared, but a static build can be requested)
+if(NOT SFML_OS_IOS)
     sfml_set_option(BUILD_SHARED_LIBS TRUE BOOL "TRUE to build SFML as shared libraries, FALSE to build it as static libraries")
 else()
-    if(SFML_OS_IOS)
-        set(BUILD_SHARED_LIBS FALSE)
-    elseif(SFML_OS_ANDROID)
-        set(BUILD_SHARED_LIBS TRUE)
-    endif()
+    set(BUILD_SHARED_LIBS FALSE)
+endif()
+
+# on Android, Image/Font::loadFromFile read from the APK assets by default;
+# an app that ships its resources on the filesystem can turn this off
+if(SFML_OS_ANDROID)
+    sfml_set_option(SFML_ANDROID_LOAD_FROM_ASSETS TRUE BOOL "TRUE to load Image/Font files from the APK assets on Android, FALSE to load them from the filesystem")
 endif()
 
 # add an option for building the examples

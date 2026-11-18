@@ -120,7 +120,7 @@ void Image::create(unsigned int width, unsigned int height, const Uint8* pixels)
 ////////////////////////////////////////////////////////////
 bool Image::loadFromFile(const std::string& filename)
 {
-    #ifndef SFML_SYSTEM_ANDROID
+    #if !defined(SFML_SYSTEM_ANDROID) || !defined(SFML_ANDROID_LOAD_FROM_ASSETS)
 
         return priv::ImageLoader::getInstance().loadImageFromFile(filename, m_pixels, m_size);
 

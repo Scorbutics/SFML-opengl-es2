@@ -128,6 +128,9 @@ target_link_libraries(sfml-graphics PRIVATE Freetype)
 
 # add preprocessor symbols
 target_compile_definitions(sfml-graphics PRIVATE "STBI_FAILURE_USERMSG")
+if(SFML_OS_ANDROID AND SFML_ANDROID_LOAD_FROM_ASSETS)
+    target_compile_definitions(sfml-graphics PRIVATE "SFML_ANDROID_LOAD_FROM_ASSETS")
+endif()
 
 # ImageLoader.cpp must be compiled with the -fno-strict-aliasing
 # when gcc is used; otherwise saving PNGs may crash in stb_image_write

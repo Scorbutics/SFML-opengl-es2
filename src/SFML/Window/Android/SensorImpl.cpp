@@ -123,7 +123,8 @@ void SensorImpl::close()
 Vector3f SensorImpl::update()
 {
     // Update our sensor data list
-    ALooper_pollAll(0, NULL, NULL, NULL);
+    // ALooper_pollAll is gone from NDK r27: pollOnce until no callback is left
+    while (ALooper_pollOnce(0, NULL, NULL, NULL) == ALOOPER_POLL_CALLBACK) {}
 
     return sensorData[m_index];
 }

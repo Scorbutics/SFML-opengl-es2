@@ -210,7 +210,8 @@ void WindowImplAndroid::processEvents()
     }
 
     // Process incoming OS events
-    ALooper_pollAll(0, NULL, NULL, NULL);
+    // ALooper_pollAll is gone from NDK r27: pollOnce until no callback is left
+    while (ALooper_pollOnce(0, NULL, NULL, NULL) == ALOOPER_POLL_CALLBACK) {}
 
     ActivityStates& states = getActivity();
     Lock lock(states.mutex);

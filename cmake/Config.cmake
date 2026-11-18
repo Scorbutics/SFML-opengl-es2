@@ -70,6 +70,13 @@ elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Android")
     # use the OpenGL ES implementation on Android
     set(OPENGL_ES 1)
 
+# Modern CMake (3.14+) uses CMAKE_SYSTEM_NAME=iOS for iOS cross-compilation
+elseif(${CMAKE_SYSTEM_NAME} STREQUAL "iOS")
+    set(SFML_OS_IOS 1)
+
+    # use the OpenGL ES implementation on iOS
+    set(OPENGL_ES 1)
+
 # comparing CMAKE_SYSTEM_NAME with "CYGWIN" generates a false warning depending on the CMake version
 # let's avoid it so the actual error is more visible
 elseif(${CYGWIN})
